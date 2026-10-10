@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DietFlow.Web/DietFlow.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DietFlow.Tests/DietFlow.Tests.csproj" />
+  </Folder>
+</Solution>

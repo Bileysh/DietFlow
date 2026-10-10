@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dietflow}
+      POSTGRES_USER: ${POSTGRES_USER:-dietflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    ports:
+      - "5433:5432"           
+    volumes:
+      - pgdata:/var/lib/postgresql/data   
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dietflow} -d ${POSTGRES_DB:-dietflow}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy   
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Default: "Host=db;Port=5432;Database=${POSTGRES_DB:-dietflow};Username=${POSTGRES_USER:-dietflow};Password=${POSTGRES_PASSWORD}"
+    ports:
+      - "8080:8080"
+    volumes:
+      - uploads:/app/wwwroot/uploads     
+    profiles: ["full"]   
+
+volumes:
+  pgdata:
+  uploads:
