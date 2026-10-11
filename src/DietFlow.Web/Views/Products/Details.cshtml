@@ -1,0 +1,82 @@
+@model ProductDetailsVm
+@{
+    var p = Model.Product;
+    ViewData["Title"] = p.Name;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Продукти</a></li>
+        <li class="breadcrumb-item active">@p.Name</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h3 mb-1">@p.Name</h1>
+        <span class="badge text-bg-light">@(p.Category ?? "Без категорії")</span>
+        @if (p.Barcode is not null)
+        {
+            <span class="text-muted small ms-2">штрихкод @p.Barcode</span>
+        }
+    </div>
+    <div class="text-nowrap">
+        <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-secondary">Змінити</a>
+        <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-outline-danger">Видалити</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    @foreach (var (label, value, unit) in new[]
+              {
+                  ("Калорії", p.KcalPer100g, "ккал"), ("Білки", p.ProteinPer100g, "г"),
+                  ("Жири", p.FatPer100g, "г"), ("Вуглеводи", p.CarbsPer100g, "г"),
+              })
+    {
+        <div class="col-6 col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <div class="text-muted small">@label на 100 г</div>
+                    <div class="fs-4 fw-semibold">@value.ToString("0.#") <span class="fs-6">@unit</span></div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+<h2 class="h5">Де купити — @Model.CityName</h2>
+@if (Model.Prices.Count == 0)
+{
+    <p class="text-muted">У магазинах цього міста ціни на продукт немає.</p>
+}
+else
+{
+    var cheapest = Model.Prices[0].PricePerKg;
+    <table class="table align-middle">
+        <thead><tr><th>Магазин</th><th>Мережа</th><th>Адреса</th><th class="text-end">Ціна, грн/кг</th><th class="text-end">Різниця</th></tr></thead>
+        <tbody>
+        @foreach (var row in Model.Prices)
+        {
+            <tr class="@(row.PricePerKg == cheapest ? "table-success" : "")">
+                <td><a asp-controller="Stores" asp-action="Details" asp-route-id="@row.StoreId">@row.StoreName</a></td>
+                <td>@row.Chain</td>
+                <td class="text-muted small">@row.Address</td>
+                <td class="text-end fw-semibold">@row.PricePerKg.ToString("0.00")</td>
+                <td class="text-end text-muted small">
+                    @(row.PricePerKg == cheapest ? "найдешевше" : $"+{(row.PricePerKg / cheapest - 1) * 100:0}%")
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+
+<h2 class="h5 mt-4">Використовується в рецептах</h2>
+@if (Model.UsedInRecipes.Count == 0)
+{
+    <p class="text-muted">Поки ні в одному (рецепти з'являться на Дні 3).</p>
+}
+else
+{
+    <ul>@foreach (var r in Model.UsedInRecipes) { <li>@r</li> }</ul>
+}

@@ -95,6 +95,33 @@ namespace DietFlow.Web.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("DietFlow.Web.Models.Entities.City", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("Cities");
+                });
+
             modelBuilder.Entity("DietFlow.Web.Models.Entities.Meal", b =>
                 {
                     b.Property<int>("Id")
@@ -297,6 +324,14 @@ namespace DietFlow.Web.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
 
+                    b.Property<string>("Chain")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("CityId")
+                        .HasColumnType("integer");
+
                     b.Property<double>("Latitude")
                         .HasColumnType("double precision");
 
@@ -309,6 +344,8 @@ namespace DietFlow.Web.Migrations
                         .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CityId", "Chain");
 
                     b.ToTable("Stores");
                 });
@@ -516,6 +553,17 @@ namespace DietFlow.Web.Migrations
                     b.Navigation("Recipe");
                 });
 
+            modelBuilder.Entity("DietFlow.Web.Models.Entities.Store", b =>
+                {
+                    b.HasOne("DietFlow.Web.Models.Entities.City", "City")
+                        .WithMany("Stores")
+                        .HasForeignKey("CityId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("City");
+                });
+
             modelBuilder.Entity("DietFlow.Web.Models.Entities.StorePrice", b =>
                 {
                     b.HasOne("DietFlow.Web.Models.Entities.Product", "Product")
@@ -589,6 +637,11 @@ namespace DietFlow.Web.Migrations
             modelBuilder.Entity("DietFlow.Web.Models.Entities.AppUser", b =>
                 {
                     b.Navigation("Meals");
+                });
+
+            modelBuilder.Entity("DietFlow.Web.Models.Entities.City", b =>
+                {
+                    b.Navigation("Stores");
                 });
 
             modelBuilder.Entity("DietFlow.Web.Models.Entities.Meal", b =>

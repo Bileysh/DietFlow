@@ -1,0 +1,50 @@
+@model Store
+@{
+    ViewData["Title"] = Model.Name;
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Магазини</a></li>
+        <li class="breadcrumb-item active">@Model.Name</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+    <div>
+        <h1 class="h3 mb-1">@Model.Name</h1>
+        <div class="text-muted">
+            @Model.Chain · @Model.City.Name · @Model.Address
+            <span class="small">(@Model.Latitude.ToString("0.0000"), @Model.Longitude.ToString("0.0000"))</span>
+        </div>
+    </div>
+    <div class="text-nowrap">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Змінити</a>
+        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">Видалити</a>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="h5 mb-0">Ціни (@Model.Prices.Count)</h2>
+    <a asp-controller="StorePrices" asp-action="Create" asp-route-storeId="@Model.Id" class="btn btn-sm btn-primary">+ Додати ціну</a>
+</div>
+
+<table class="table table-sm table-hover align-middle">
+    <thead><tr><th>Продукт</th><th class="text-end">Ціна, грн/кг</th><th>Оновлено</th><th></th></tr></thead>
+    <tbody>
+    @foreach (var sp in Model.Prices)
+    {
+        <tr>
+            <td><a asp-controller="Products" asp-action="Details" asp-route-id="@sp.ProductId">@sp.Product.Name</a></td>
+            <td class="text-end">@sp.PricePerKg.ToString("0.00")</td>
+            <td class="text-muted small">@sp.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
+            <td class="text-end text-nowrap">
+                <a asp-controller="StorePrices" asp-action="Edit" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
+                   class="btn btn-sm btn-outline-secondary">Змінити</a>
+                <a asp-controller="StorePrices" asp-action="Delete" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
+                   class="btn btn-sm btn-outline-danger">×</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

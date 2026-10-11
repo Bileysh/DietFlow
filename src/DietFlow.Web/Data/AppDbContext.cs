@@ -10,6 +10,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Recipe> Recipes => Set<Recipe>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<RecipeIngredient> RecipeIngredients => Set<RecipeIngredient>();
+    public DbSet<City> Cities => Set<City>();
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<StorePrice> StorePrices => Set<StorePrice>();
     public DbSet<MealRecommendation> MealRecommendations => Set<MealRecommendation>();
@@ -32,6 +33,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .HasOne(ri => ri.Product).WithMany(p => p.UsedIn)
             .HasForeignKey(ri => ri.ProductId).OnDelete(DeleteBehavior.Restrict);
         b.Entity<RecipeIngredient>().Property(ri => ri.Grams).HasPrecision(8, 2);
+
+        b.Entity<Store>()
+            .HasOne(s => s.City).WithMany(c => c.Stores)
+            .HasForeignKey(s => s.CityId).OnDelete(DeleteBehavior.Restrict);
+        b.Entity<Store>().HasIndex(s => new { s.CityId, s.Chain });
+        b.Entity<City>().HasIndex(c => c.Name).IsUnique();
 
         b.Entity<StorePrice>().HasKey(sp => new { sp.StoreId, sp.ProductId });
         b.Entity<StorePrice>()

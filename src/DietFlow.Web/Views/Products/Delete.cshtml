@@ -1,0 +1,26 @@
+@model Product
+@{
+    ViewData["Title"] = $"Видалення: {Model.Name}";
+    var usedIn = ViewBag.UsedInRecipes as List<string> ?? [];
+}
+
+<h1 class="h3 mb-3">Видалити продукт «@Model.Name»?</h1>
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+
+@if (usedIn.Count > 0)
+{
+    <div class="alert alert-warning">
+        Продукт використовується в рецептах — спершу приберіть його з них:
+        <ul class="mb-0">@foreach (var r in usedIn) { <li>@r</li> }</ul>
+    </div>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-secondary">Назад</a>
+}
+else
+{
+    <p>Разом із продуктом буде видалено всі його ціни в магазинах. Дію не можна скасувати.</p>
+    <form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+        <button type="submit" class="btn btn-danger">Видалити</button>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Скасувати</a>
+    </form>
+}

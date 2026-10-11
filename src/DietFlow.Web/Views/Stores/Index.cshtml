@@ -1,0 +1,45 @@
+@model List<StoreListItemVm>
+@{
+    ViewData["Title"] = "Магазини";
+    var chains = ViewBag.Chains as List<string> ?? [];
+    var selectedChain = ViewBag.Chain as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Магазини — @ViewBag.CityName</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Додати магазин</a>
+</div>
+
+<div class="mb-3 d-flex flex-wrap gap-2">
+    <a asp-action="Index" class="btn btn-sm @(selectedChain is null ? "btn-dark" : "btn-outline-dark")">Усі</a>
+    @foreach (var c in chains)
+    {
+        <a asp-action="Index" asp-route-chain="@c" class="btn btn-sm @(c == selectedChain ? "btn-dark" : "btn-outline-dark")">@c</a>
+    }
+</div>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">У цьому місті магазинів поки немає.</p>
+}
+else
+{
+    <table class="table table-hover align-middle">
+        <thead><tr><th>Назва</th><th>Мережа</th><th>Адреса</th><th class="text-end">Товарів з цінами</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var s in Model)
+        {
+            <tr>
+                <td><a asp-action="Details" asp-route-id="@s.Id">@s.Name</a></td>
+                <td>@s.Chain</td>
+                <td class="text-muted small">@s.Address</td>
+                <td class="text-end">@s.PriceCount</td>
+                <td class="text-end text-nowrap">
+                    <a asp-action="Edit" asp-route-id="@s.Id" class="btn btn-sm btn-outline-secondary">Змінити</a>
+                    <a asp-action="Delete" asp-route-id="@s.Id" class="btn btn-sm btn-outline-danger">Видалити</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

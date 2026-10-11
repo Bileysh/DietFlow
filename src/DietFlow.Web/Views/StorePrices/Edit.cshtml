@@ -1,0 +1,20 @@
+@model StorePriceFormVm
+@{
+    ViewData["Title"] = "Зміна ціни";
+}
+
+<h1 class="h3 mb-3">@Model.ProductName — @Model.StoreName</h1>
+<form asp-action="Edit" asp-route-storeId="@Model.StoreId" asp-route-productId="@Model.ProductId" method="post" class="col-md-4">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="mb-3">
+        <label asp-for="PricePerKg" class="form-label"></label>
+        <input asp-for="PricePerKg" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="PricePerKg" class="text-danger small"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Зберегти</button>
+    <a asp-controller="Stores" asp-action="Details" asp-route-id="@Model.StoreId" class="btn btn-link">Скасувати</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

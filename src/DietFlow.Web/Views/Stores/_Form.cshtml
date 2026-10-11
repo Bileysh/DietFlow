@@ -1,0 +1,43 @@
+@model StoreFormVm
+@{
+    var chains = ViewBag.Chains as List<string> ?? [];
+}
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<input type="hidden" asp-for="Id" />
+
+<div class="row g-3">
+    <div class="col-md-5">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" placeholder="Напр. Сільпо на Хрещатику" />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Chain" class="form-label"></label>
+        <input asp-for="Chain" class="form-control" list="chainOptions" />
+        <datalist id="chainOptions">
+            @foreach (var c in chains) { <option value="@c"></option> }
+        </datalist>
+        <span asp-validation-for="Chain" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="CityId" class="form-label"></label>
+        <select asp-for="CityId" asp-items="ViewBag.Cities" class="form-select"></select>
+        <span asp-validation-for="CityId" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Address" class="form-label"></label>
+        <input asp-for="Address" class="form-control" />
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="Latitude" class="form-label"></label>
+        <input asp-for="Latitude" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="Latitude" class="text-danger small"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="Longitude" class="form-label"></label>
+        <input asp-for="Longitude" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="Longitude" class="text-danger small"></span>
+    </div>
+</div>
+<p class="form-text">Координати можна скопіювати з Google Maps (правий клік по точці). На Дні 8 з'явиться вибір точки на мапі.</p>

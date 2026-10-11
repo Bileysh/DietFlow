@@ -1,0 +1,13 @@
+@model Store
+@{
+    ViewData["Title"] = $"Видалення: {Model.Name}";
+}
+
+<h1 class="h3 mb-3">Видалити магазин «@Model.Name»?</h1>
+<p>@Model.Chain · @Model.City.Name · @Model.Address</p>
+<div class="alert alert-warning">Разом із магазином буде видалено <strong>@ViewBag.PriceCount</strong> цін. Дію не можна скасувати.</div>
+
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+    <button type="submit" class="btn btn-danger">Видалити</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Скасувати</a>
+</form>

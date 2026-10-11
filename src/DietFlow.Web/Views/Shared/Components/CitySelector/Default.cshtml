@@ -1,0 +1,8 @@
+@model Microsoft.AspNetCore.Mvc.Rendering.SelectList
+<form asp-controller="Cities" asp-action="Select" method="post" class="d-flex align-items-center gap-2">
+    <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
+    <label for="citySelect" class="small text-muted mb-0">Місто</label>
+    <select id="citySelect" name="cityId" asp-items="Model" class="form-select form-select-sm"
+            onchange="this.form.submit()"></select>
+    <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">OK</button></noscript>
+</form>

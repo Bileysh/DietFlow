@@ -1,0 +1,27 @@
+@model StorePriceFormVm
+@{
+    ViewData["Title"] = "Нова ціна";
+}
+
+<h1 class="h3 mb-3">Нова ціна — @Model.StoreName</h1>
+<form asp-action="Create" asp-route-storeId="@Model.StoreId" method="post" class="col-md-6">
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+    <div class="mb-3">
+        <label asp-for="ProductId" class="form-label"></label>
+        <select asp-for="ProductId" asp-items="ViewBag.Products" class="form-select">
+            <option value="0">— оберіть продукт —</option>
+        </select>
+        <span asp-validation-for="ProductId" class="text-danger small"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="PricePerKg" class="form-label"></label>
+        <input asp-for="PricePerKg" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="PricePerKg" class="text-danger small"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Зберегти</button>
+    <a asp-controller="Stores" asp-action="Details" asp-route-id="@Model.StoreId" class="btn btn-link">Скасувати</a>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

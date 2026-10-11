@@ -1,0 +1,12 @@
+@model StorePrice
+@{
+    ViewData["Title"] = "Видалення ціни";
+}
+
+<h1 class="h3 mb-3">Видалити ціну?</h1>
+<p><strong>@Model.Product.Name</strong> у магазині <strong>@Model.Store.Name</strong>: @Model.PricePerKg.ToString("0.00") грн/кг</p>
+
+<form asp-action="DeleteConfirmed" asp-route-storeId="@Model.StoreId" asp-route-productId="@Model.ProductId" method="post">
+    <button type="submit" class="btn btn-danger">Видалити</button>
+    <a asp-controller="Stores" asp-action="Details" asp-route-id="@Model.StoreId" class="btn btn-link">Скасувати</a>
+</form>

@@ -1,0 +1,48 @@
+@model ProductFormVm
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<input type="hidden" asp-for="Id" />
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <label asp-for="Name" class="form-label"></label>
+        <input asp-for="Name" class="form-control" />
+        <span asp-validation-for="Name" class="text-danger small"></span>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Category" class="form-label"></label>
+        <input asp-for="Category" class="form-control" list="categoryOptions" />
+        <datalist id="categoryOptions">
+            @foreach (var c in new[] { "М'ясо", "Риба", "Яйця та молочне", "Крупи", "Хліб", "Овочі", "Фрукти", "Бобові", "Олії", "Горіхи", "Інше" })
+            {
+                <option value="@c"></option>
+            }
+        </datalist>
+    </div>
+    <div class="col-md-3">
+        <label asp-for="Barcode" class="form-label"></label>
+        <input asp-for="Barcode" class="form-control" />
+        <span asp-validation-for="Barcode" class="text-danger small"></span>
+    </div>
+
+    <div class="col-6 col-md-3">
+        <label asp-for="KcalPer100g" class="form-label"></label>
+        <input asp-for="KcalPer100g" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="KcalPer100g" class="text-danger small"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="ProteinPer100g" class="form-label"></label>
+        <input asp-for="ProteinPer100g" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="ProteinPer100g" class="text-danger small"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="FatPer100g" class="form-label"></label>
+        <input asp-for="FatPer100g" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="FatPer100g" class="text-danger small"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="CarbsPer100g" class="form-label"></label>
+        <input asp-for="CarbsPer100g" class="form-control" inputmode="decimal" />
+        <span asp-validation-for="CarbsPer100g" class="text-danger small"></span>
+    </div>
+</div>

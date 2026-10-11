@@ -1,0 +1,92 @@
+@model ProductIndexVm
+@{
+    ViewData["Title"] = "Продукти";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Продукти</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Додати продукт</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-5">
+        <input name="q" value="@Model.Q" class="form-control" placeholder="Пошук за назвою..." />
+    </div>
+    <div class="col-md-3">
+        <select name="category" class="form-select">
+            <option value="">Усі категорії</option>
+            @foreach (var c in Model.Categories)
+            {
+                <option value="@c" selected="@(c == Model.Category)">@c</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select name="sort" class="form-select">
+            <option value="name" selected="@(Model.Sort == "name")">За назвою</option>
+            <option value="kcal" selected="@(Model.Sort == "kcal")">Ккал ↑</option>
+            <option value="kcal_desc" selected="@(Model.Sort == "kcal_desc")">Ккал ↓</option>
+            <option value="protein_desc" selected="@(Model.Sort == "protein_desc")">Білок ↓</option>
+        </select>
+    </div>
+    <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-secondary">Знайти</button>
+    </div>
+</form>
+
+<p class="text-muted small">Знайдено: @Model.TotalCount · ціни для міста <strong>@Model.CityName</strong></p>
+
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead>
+        <tr>
+            <th>Назва</th>
+            <th>Категорія</th>
+            <th class="text-end">Ккал</th>
+            <th class="text-end">Б / Ж / В</th>
+            <th class="text-end">Від, грн/кг</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        @foreach (var p in Model.Items)
+        {
+            <tr>
+                <td><a asp-action="Details" asp-route-id="@p.Id">@p.Name</a></td>
+                <td>@p.Category</td>
+                <td class="text-end">@p.Kcal.ToString("0.#")</td>
+                <td class="text-end">@p.Protein.ToString("0.#") / @p.Fat.ToString("0.#") / @p.Carbs.ToString("0.#")</td>
+                <td class="text-end">
+                    @if (p.MinPrice is { } min)
+                    {
+                        @min.ToString("0.00") <span class="text-muted small">(@p.StoreCount маг.)</span>
+                    }
+                    else
+                    {
+                        <span class="text-muted">немає</span>
+                    }
+                </td>
+                <td class="text-end text-nowrap">
+                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Змінити</a>
+                    <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger">Видалити</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Сторінки">
+        <ul class="pagination">
+            @for (var i = 1; i <= Model.TotalPages; i++)
+            {
+                <li class="page-item @(i == Model.Page ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-q="@Model.Q"
+                       asp-route-category="@Model.Category" asp-route-sort="@Model.Sort">@i</a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
