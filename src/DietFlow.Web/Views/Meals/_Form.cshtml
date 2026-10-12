@@ -1,0 +1,75 @@
+@model MealFormVm
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<input type="hidden" asp-for="Id" />
+
+<div class="row g-3">
+    <div class="col-md-4">
+        <label asp-for="Type" class="form-label"></label>
+        <select asp-for="Type" class="form-select">
+            @foreach (var t in Enum.GetValues<MealType>())
+            {
+                <option value="@t">@MealTypeText.Name(t)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="EatenAtLocal" class="form-label"></label>
+        <input asp-for="EatenAtLocal" type="datetime-local" class="form-control" />
+        <span asp-validation-for="EatenAtLocal" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Photo" class="form-label"></label>
+        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" />
+        <span asp-validation-for="Photo" class="text-danger small"></span>
+        @if (Model.CurrentPhotoPath is not null)
+        {
+            <div class="d-flex align-items-center gap-2 mt-2">
+                <img src="@Model.CurrentPhotoPath" alt="" style="height:48px" class="rounded" />
+                <div class="form-check">
+                    <input asp-for="RemovePhoto" class="form-check-input" />
+                    <label asp-for="RemovePhoto" class="form-check-label small"></label>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<fieldset class="mt-4">
+    <legend class="h6">Аналіз страви <span class="text-muted small fw-normal">(з Дня 4 — автоматично від AI)</span></legend>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label asp-for="DishName" class="form-label"></label>
+            <input asp-for="DishName" class="form-control" />
+        </div>
+        <div class="col-md-3">
+            <label asp-for="Kcal" class="form-label"></label>
+            <input asp-for="Kcal" class="form-control" />
+            <span asp-validation-for="Kcal" class="text-danger small"></span>
+        </div>
+        <div class="col-md-3">
+            <label asp-for="HealthScore" class="form-label"></label>
+            <input asp-for="HealthScore" class="form-control" />
+            <span asp-validation-for="HealthScore" class="text-danger small"></span>
+        </div>
+        <div class="col-4">
+            <label asp-for="ProteinG" class="form-label"></label>
+            <input asp-for="ProteinG" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="ProteinG" class="text-danger small"></span>
+        </div>
+        <div class="col-4">
+            <label asp-for="FatG" class="form-label"></label>
+            <input asp-for="FatG" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="FatG" class="text-danger small"></span>
+        </div>
+        <div class="col-4">
+            <label asp-for="CarbsG" class="form-label"></label>
+            <input asp-for="CarbsG" class="form-control" inputmode="decimal" />
+            <span asp-validation-for="CarbsG" class="text-danger small"></span>
+        </div>
+        <div class="col-12">
+            <label asp-for="Verdict" class="form-label"></label>
+            <textarea asp-for="Verdict" rows="2" class="form-control"></textarea>
+        </div>
+    </div>
+</fieldset>

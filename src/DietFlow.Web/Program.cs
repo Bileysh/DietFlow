@@ -14,6 +14,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CityContext>();
+builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<RecipeCalculator>();
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
 builder.Services.AddControllersWithViews();
 
@@ -26,7 +29,7 @@ if (app.Environment.IsDevelopment())
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
-    await DbSeeder.SeedAsync(db);
+    await DbSeeder.SeedAsync(db, app.Environment.WebRootPath);
 }
 
 var appCulture = (CultureInfo)CultureInfo.GetCultureInfo("uk-UA").Clone();

@@ -87,9 +87,13 @@ public static class DbSeeder
         ("Майонез", "Соуси", 629, 1, 67, 3, 120),
     ];
 
-    public static async Task SeedAsync(AppDbContext db)
+    public const string DemoUserEmail = "demo@dietflow.local";
+
+    public static async Task SeedAsync(AppDbContext db, string webRootPath)
     {
         var rnd = new Random(RandomSeed);
+
+        await SeedDemoUserAsync(db);
 
         if (!await db.Cities.AnyAsync())
         {
@@ -162,6 +166,88 @@ public static class DbSeeder
             }
             await db.SaveChangesAsync();
         }
+
+        await SeedRecipesAsync(db, webRootPath);
+        await SeedDemoMealsAsync(db);
+    }
+
+    private static async Task SeedDemoUserAsync(AppDbContext db)
+    {
+        if (await db.Users.AnyAsync(u => u.Email == DemoUserEmail)) return;
+
+        db.Users.Add(new AppUser
+        {
+            UserName = DemoUserEmail,
+            NormalizedUserName = DemoUserEmail.ToUpperInvariant(),
+            Email = DemoUserEmail,
+            NormalizedEmail = DemoUserEmail.ToUpperInvariant(),
+            DisplayName = "Демо-користувач",
+            SecurityStamp = Guid.NewGuid().ToString(),
+            DailyKcalGoal = 2000,
+        });
+        await db.SaveChangesAsync();
+    }
+
+    private static async Task SeedRecipesAsync(AppDbContext db, string webRootPath)
+    {
+        if (await db.Recipes.AnyAsync()) return;
+
+        var productIds = await db.Products.ToDictionaryAsync(p => p.Name, p => p.Id);
+
+        foreach (var data in SeedRecipes.All)
+        {
+            var slug = Services.SlugGenerator.Slugify(data.Title);
+            var recipe = new Recipe
+            {
+                Title = data.Title,
+                Slug = slug,
+                Description = data.Description,
+                StepsMarkdown = data.Steps,
+                Method = data.Method,
+                CookTimeMinutes = data.Minutes,
+                Servings = 1,
+                PhotoPath = FindSeedPhoto(webRootPath, slug),
+            };
+
+            foreach (var (product, grams) in data.Ingredients)
+            {
+                if (productIds.TryGetValue(product, out var pid))
+                    recipe.Ingredients.Add(new RecipeIngredient { ProductId = pid, Grams = grams });
+            }
+            db.Recipes.Add(recipe);
+        }
+        await db.SaveChangesAsync();
+    }
+
+    private static string? FindSeedPhoto(string webRootPath, string slug)
+    {
+        foreach (var ext in new[] { ".jpg", ".webp", ".png", ".svg" })
+        {
+            if (File.Exists(Path.Combine(webRootPath, "images", "recipes", slug + ext)))
+                return $"/images/recipes/{slug}{ext}";
+        }
+        return null;
+    }
+
+    private static async Task SeedDemoMealsAsync(AppDbContext db)
+    {
+        if (await db.Meals.AnyAsync()) return;
+
+        var userId = await db.Users.Where(u => u.Email == DemoUserEmail).Select(u => u.Id).FirstAsync();
+        var today = DateOnly.FromDateTime(Services.AppTime.NowLocal);
+        DateTime At(int daysAgo, int hour) =>
+            Services.AppTime.ToUtc(today.AddDays(-daysAgo).ToDateTime(new TimeOnly(hour, 0)));
+
+        db.Meals.AddRange(
+            new Meal { UserId = userId, Type = MealType.Breakfast, EatenAt = At(1, 8), DishName = "Вівсянка з ягодами",
+                Kcal = 384, ProteinG = 14, FatG = 9, CarbsG = 64, HealthScore = 9, Verdict = "Збалансований сніданок з клітковиною." },
+            new Meal { UserId = userId, Type = MealType.Lunch, EatenAt = At(1, 13), DishName = "Смажена картопля з ковбасою",
+                Kcal = 980, ProteinG = 17, FatG = 74, CarbsG = 47, HealthScore = 3, Verdict = "Забагато жиру, мало білка та овочів." },
+            new Meal { UserId = userId, Type = MealType.Dinner, EatenAt = At(1, 19), DishName = "Хек на пару з рисом",
+                Kcal = 418, ProteinG = 35, FatG = 5, CarbsG = 60, HealthScore = 8, Verdict = "Легка вечеря з нежирним білком." },
+            new Meal { UserId = userId, Type = MealType.Breakfast, EatenAt = At(0, 8), DishName = "Омлет зі шпинатом",
+                Kcal = 302, ProteinG = 21, FatG = 22, CarbsG = 5, HealthScore = 8, Verdict = "Білковий сніданок." });
+        await db.SaveChangesAsync();
     }
 
     public static IReadOnlyCollection<string> KnownChains => ChainFactors.Keys;

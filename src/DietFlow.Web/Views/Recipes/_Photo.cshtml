@@ -1,0 +1,16 @@
+@model Recipe
+@{
+    var height = ViewData["Height"] as string ?? "180px";
+}
+@if (Model.PhotoPath is not null)
+{
+    <img src="@Model.PhotoPath" alt="@Model.Title" loading="lazy"
+         class="w-100 object-fit-cover rounded-top" style="height:@height" />
+}
+else
+{
+    <div class="w-100 rounded-top d-flex align-items-center justify-content-center recipe-placeholder method-@Model.Method.ToString().ToLowerInvariant()"
+         style="height:@height" role="img" aria-label="@Model.Title">
+        <span style="font-size:3rem">@CookingMethodText.Icon(Model.Method)</span>
+    </div>
+}

@@ -1,0 +1,54 @@
+@using DietFlow.Web.Services
+@model Meal
+@{
+    ViewData["Title"] = Model.DishName ?? "Прийом їжі";
+}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a asp-action="Index">Щоденник</a></li>
+        <li class="breadcrumb-item active">@(Model.DishName ?? "Прийом їжі")</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        @if (Model.PhotoPath is not null)
+        {
+            <img src="@Model.PhotoPath" alt="@Model.DishName" class="img-fluid rounded shadow-sm" />
+        }
+        else
+        {
+            <div class="rounded bg-light d-flex align-items-center justify-content-center text-muted" style="height:240px">Фото немає</div>
+        }
+    </div>
+    <div class="col-md-7">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="h3 mb-1">@(Model.DishName ?? "Без назви")</h1>
+                <div class="text-muted">@MealTypeText.Name(Model.Type) · @AppTime.ToLocal(Model.EatenAt).ToString("d MMMM yyyy, HH:mm")</div>
+            </div>
+            <div class="text-nowrap">
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary">Змінити</a>
+                <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-danger">Видалити</a>
+            </div>
+        </div>
+
+        <div class="row g-2 text-center my-3">
+            @foreach (var (label, value) in new[] { ("ккал", Model.Kcal?.ToString()), ("білки, г", Model.ProteinG?.ToString("0.#")), ("жири, г", Model.FatG?.ToString("0.#")), ("вуглеводи, г", Model.CarbsG?.ToString("0.#")) })
+            {
+                <div class="col-3"><div class="border rounded py-2"><div class="fs-5 fw-semibold">@(value ?? "—")</div><div class="small text-muted">@label</div></div></div>
+            }
+        </div>
+
+        @if (Model.HealthScore is { } score)
+        {
+            <p>Оцінка корисності: <span class="badge fs-6 @(score >= 7 ? "text-bg-success" : score >= 5 ? "text-bg-warning" : "text-bg-danger")">@score / 10</span></p>
+        }
+        @if (Model.Verdict is not null)
+        {
+            <p>@Model.Verdict</p>
+        }
+        <p class="small text-muted">На Дні 4 ці дані заповнюватиме AI за фотографією та пропонуватиме кращі рецепти.</p>
+    </div>
+</div>

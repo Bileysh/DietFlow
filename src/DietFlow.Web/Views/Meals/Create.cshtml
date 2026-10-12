@@ -1,0 +1,17 @@
+@model MealFormVm
+@{
+    ViewData["Title"] = "Новий прийом їжі";
+}
+
+<h1 class="h3 mb-3">Новий прийом їжі</h1>
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <partial name="_Form" model="Model" />
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <a asp-action="Index" class="btn btn-link">Скасувати</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

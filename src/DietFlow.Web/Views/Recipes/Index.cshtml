@@ -1,0 +1,78 @@
+@model RecipeIndexVm
+@{
+    ViewData["Title"] = "Рецепти";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Рецепти</h1>
+    <a asp-action="Create" class="btn btn-primary">+ Додати рецепт</a>
+</div>
+
+<form method="get" class="row g-2 mb-3">
+    <div class="col-md-4">
+        <select name="method" class="form-select">
+            <option value="">Будь-який спосіб</option>
+            @foreach (var m in Enum.GetValues<CookingMethod>())
+            {
+                <option value="@m" selected="@(m == Model.Method)">@CookingMethodText.Icon(m) @CookingMethodText.Name(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-md-3">
+        <input name="maxKcal" type="number" min="0" value="@Model.MaxKcal" class="form-control" placeholder="Макс. ккал на порцію" />
+    </div>
+    <div class="col-md-3">
+        <select name="sort" class="form-select">
+            <option value="title" selected="@(Model.Sort == "title")">За назвою</option>
+            <option value="cost" selected="@(Model.Sort == "cost")">Найдешевші</option>
+            <option value="kcal" selected="@(Model.Sort == "kcal")">Найменше ккал</option>
+            <option value="protein" selected="@(Model.Sort == "protein")">Найбільше білка</option>
+            <option value="time" selected="@(Model.Sort == "time")">Найшвидші</option>
+        </select>
+    </div>
+    <div class="col-md-2 d-grid">
+        <button class="btn btn-outline-secondary">Показати</button>
+    </div>
+</form>
+
+<p class="text-muted small">Знайдено: @Model.Items.Count · вартість для міста <strong>@Model.CityName</strong> (за найнижчими цінами)</p>
+
+<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">
+    @foreach (var card in Model.Items)
+    {
+        var r = card.Recipe;
+        var s = card.Summary;
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <a asp-action="Details" asp-route-id="@r.Id">
+                    <partial name="_Photo" model="r" />
+                </a>
+                <div class="card-body">
+                    <h2 class="h6 card-title"><a asp-action="Details" asp-route-id="@r.Id" class="text-decoration-none">@r.Title</a></h2>
+                    <div class="small text-muted mb-2">@CookingMethodText.Name(r.Method) · @r.CookTimeMinutes хв</div>
+                    @if (s is not null)
+                    {
+                        <div class="d-flex justify-content-between small">
+                            <span><strong>@s.Kcal.ToString("0")</strong> ккал</span>
+                            <span>Б @s.Protein.ToString("0") · Ж @s.Fat.ToString("0") · В @s.Carbs.ToString("0")</span>
+                        </div>
+                        <div class="mt-2">
+                            @if (s.Cost is { } cost)
+                            {
+                                <span class="badge text-bg-success">≈ @cost.ToString("0.00") грн</span>
+                                @if (!s.CostIsComplete)
+                                {
+                                    <span class="badge text-bg-warning" title="Немає ціни: @string.Join(", ", s.MissingPrices)">ціна неповна</span>
+                                }
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">немає цін у місті</span>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+</div>

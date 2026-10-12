@@ -1,0 +1,13 @@
+@using DietFlow.Web.Services
+@model Meal
+@{
+    ViewData["Title"] = "Видалення прийому їжі";
+}
+
+<h1 class="h3 mb-3">Видалити «@(Model.DishName ?? "прийом їжі")»?</h1>
+<p>@MealTypeText.Name(Model.Type), @AppTime.ToLocal(Model.EatenAt).ToString("d MMMM, HH:mm"). Фото також буде видалено.</p>
+
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+    <button type="submit" class="btn btn-danger">Видалити</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Скасувати</a>
+</form>

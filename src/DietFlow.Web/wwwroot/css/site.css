@@ -29,3 +29,13 @@ body {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
 }
+.recipe-placeholder { background: linear-gradient(135deg, #e9f5ec, #cfe8d6); }
+.recipe-placeholder.method-fried { background: linear-gradient(135deg, #fff1db, #ffd8a8); }
+.recipe-placeholder.method-baked { background: linear-gradient(135deg, #fde8e1, #f8c4b4); }
+.recipe-placeholder.method-grilled { background: linear-gradient(135deg, #f3e6dd, #dcbfa8); }
+.recipe-placeholder.method-boiled,
+.recipe-placeholder.method-steamed { background: linear-gradient(135deg, #e6f2fb, #c3defa); }
+.recipe-placeholder.method-stewed { background: linear-gradient(135deg, #f4ecdf, #e2cfae); }
+
+.recipe-steps ol { padding-left: 1.25rem; }
+.recipe-steps li { margin-bottom: .4rem; }

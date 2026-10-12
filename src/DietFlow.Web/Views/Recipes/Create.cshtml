@@ -1,0 +1,18 @@
+@model RecipeFormVm
+@{
+    ViewData["Title"] = "Новий рецепт";
+}
+
+<h1 class="h3 mb-3">Новий рецепт</h1>
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <partial name="_Form" model="Model" />
+    <div class="mt-4">
+        <button type="submit" class="btn btn-primary">Зберегти</button>
+        <a asp-action="Index" class="btn btn-link">Скасувати</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/recipe-form.js" asp-append-version="true"></script>
+}

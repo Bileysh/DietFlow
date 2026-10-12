@@ -1,0 +1,12 @@
+@model Recipe
+@{
+    ViewData["Title"] = $"Видалення: {Model.Title}";
+}
+
+<h1 class="h3 mb-3">Видалити рецепт «@Model.Title»?</h1>
+<p>Разом із рецептом буде видалено його інгредієнти, фото і рекомендації AI, що на нього посилаються. Дію не можна скасувати.</p>
+
+<form asp-action="Delete" asp-route-id="@Model.Id" method="post">
+    <button type="submit" class="btn btn-danger">Видалити</button>
+    <a asp-action="Details" asp-route-id="@Model.Id" class="btn btn-link">Скасувати</a>
+</form>

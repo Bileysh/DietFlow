@@ -1,0 +1,105 @@
+@model RecipeFormVm
+@{
+    var products = (SelectList)ViewBag.Products;
+}
+
+<div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
+<input type="hidden" asp-for="Id" />
+
+<div class="row g-3">
+    <div class="col-md-8">
+        <label asp-for="Title" class="form-label"></label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger small"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Method" class="form-label"></label>
+        <select asp-for="Method" class="form-select">
+            @foreach (var m in Enum.GetValues<CookingMethod>())
+            {
+                <option value="@m">@CookingMethodText.Icon(m) @CookingMethodText.Name(m)</option>
+            }
+        </select>
+    </div>
+    <div class="col-12">
+        <label asp-for="Description" class="form-label"></label>
+        <input asp-for="Description" class="form-control" />
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="CookTimeMinutes" class="form-label"></label>
+        <input asp-for="CookTimeMinutes" class="form-control" />
+        <span asp-validation-for="CookTimeMinutes" class="text-danger small"></span>
+    </div>
+    <div class="col-6 col-md-3">
+        <label asp-for="Servings" class="form-label"></label>
+        <input asp-for="Servings" class="form-control" />
+        <span asp-validation-for="Servings" class="text-danger small"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Photo" class="form-label"></label>
+        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" />
+        <span asp-validation-for="Photo" class="text-danger small"></span>
+        @if (Model.CurrentPhotoPath is not null)
+        {
+            <div class="d-flex align-items-center gap-2 mt-2">
+                <img src="@Model.CurrentPhotoPath" alt="" style="height:48px" class="rounded" />
+                <div class="form-check">
+                    <input asp-for="RemovePhoto" class="form-check-input" />
+                    <label asp-for="RemovePhoto" class="form-check-label small"></label>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<h2 class="h5 mt-4">Інгредієнти</h2>
+<span asp-validation-for="Ingredients" class="text-danger small d-block mb-2"></span>
+<div id="ingredients">
+    @for (var i = 0; i < Model.Ingredients.Count; i++)
+    {
+        <div class="row g-2 mb-2 ingredient-row">
+            <div class="col-7">
+                <select name="Ingredients[@i].ProductId" class="form-select" aria-label="Продукт">
+                    <option value="0">— продукт —</option>
+                    @foreach (var p in products)
+                    {
+                        <option value="@p.Value" selected="@(p.Value == Model.Ingredients[i].ProductId.ToString())">@p.Text</option>
+                    }
+                </select>
+                <span asp-validation-for="Ingredients[i].ProductId" class="text-danger small"></span>
+            </div>
+            <div class="col-3">
+                <input name="Ingredients[@i].Grams" value="@(Model.Ingredients[i].Grams > 0 ? Model.Ingredients[i].Grams.ToString("0.##") : "")"
+                       class="form-control" inputmode="decimal" placeholder="грами" aria-label="Грами" />
+                <span asp-validation-for="Ingredients[i].Grams" class="text-danger small"></span>
+            </div>
+            <div class="col-2 d-grid">
+                <button type="button" class="btn btn-outline-danger remove-ingredient" aria-label="Прибрати">×</button>
+            </div>
+        </div>
+    }
+</div>
+<button type="button" id="addIngredient" class="btn btn-sm btn-outline-primary">+ Додати інгредієнт</button>
+
+<template id="ingredientTemplate">
+    <div class="row g-2 mb-2 ingredient-row">
+        <div class="col-7">
+            <select name="Ingredients[__i__].ProductId" class="form-select" aria-label="Продукт">
+                <option value="0">— продукт —</option>
+                @foreach (var p in products)
+                {
+                    <option value="@p.Value">@p.Text</option>
+                }
+            </select>
+        </div>
+        <div class="col-3"><input name="Ingredients[__i__].Grams" class="form-control" inputmode="decimal" placeholder="грами" aria-label="Грами" /></div>
+        <div class="col-2 d-grid"><button type="button" class="btn btn-outline-danger remove-ingredient" aria-label="Прибрати">×</button></div>
+    </div>
+</template>
+
+<div class="mt-4">
+    <label asp-for="StepsMarkdown" class="form-label"></label>
+    <textarea asp-for="StepsMarkdown" rows="7" class="form-control font-monospace"
+              placeholder="1. Відваріть гречку...&#10;2. Наріжте філе..."></textarea>
+    <div class="form-text">Підтримується Markdown: нумеровані списки, **жирний**, *курсив*.</div>
+</div>
