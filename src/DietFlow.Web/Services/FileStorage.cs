@@ -6,6 +6,8 @@ public interface IFileStorage
     Task<string> SaveImageAsync(IFormFile file, string folder, CancellationToken ct = default);
 
     Task DeleteAsync(string? publicPath);
+
+    Task<byte[]?> ReadAsync(string? publicPath, CancellationToken ct = default);
 }
 
 public class LocalFileStorage(IWebHostEnvironment env, ILogger<LocalFileStorage> logger) : IFileStorage
@@ -44,6 +46,19 @@ public class LocalFileStorage(IWebHostEnvironment env, ILogger<LocalFileStorage>
         if (File.Exists(fullPath)) File.Delete(fullPath);
         return Task.CompletedTask;
     }
+
+    public async Task<byte[]?> ReadAsync(string? publicPath, CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(publicPath) || !publicPath.StartsWith('/')) return null;
+
+        var webRoot = Path.GetFullPath(env.WebRootPath);
+        var fullPath = Path.GetFullPath(Path.Combine(webRoot, publicPath.TrimStart('/')));
+
+        if (!fullPath.StartsWith(webRoot, StringComparison.OrdinalIgnoreCase) || !File.Exists(fullPath))
+            return null;
+
+        return await File.ReadAllBytesAsync(fullPath, ct);
+    }
 }
 
 public static class ImageValidator
@@ -55,13 +70,25 @@ public static class ImageValidator
         var header = new byte[12];
         await using var s = file.OpenReadStream();
         var read = await s.ReadAtLeastAsync(header, header.Length, throwOnEndOfStream: false);
-        if (read < 12) return null;
+        return read < 12 ? null : DetectExtension(header);
+    }
 
+    public static string? DetectExtension(ReadOnlySpan<byte> header)
+    {
+        if (header.Length < 12) return null;
         if (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF) return ".jpg";
-        if (header.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A })) return ".png";
-        if (header.AsSpan(0, 4).SequenceEqual("RIFF"u8) && header.AsSpan(8, 4).SequenceEqual("WEBP"u8)) return ".webp";
+        if (header[..8].SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A })) return ".png";
+        if (header[..4].SequenceEqual("RIFF"u8) && header.Slice(8, 4).SequenceEqual("WEBP"u8)) return ".webp";
         return null;
     }
+
+    public static string? DetectMediaType(ReadOnlySpan<byte> data) => DetectExtension(data) switch
+    {
+        ".jpg" => "image/jpeg",
+        ".png" => "image/png",
+        ".webp" => "image/webp",
+        _ => null,
+    };
 
     public static async Task<string?> ValidateAsync(IFormFile? file)
     {

@@ -2,12 +2,15 @@ using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
 using DietFlow.Web.Services;
+using DietFlow.Web.Services.Ai;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace DietFlow.Web.Controllers;
 
-public class MealsController(AppDbContext db, CurrentUser currentUser, IFileStorage files) : Controller
+public class MealsController(
+    AppDbContext db, CurrentUser currentUser, IFileStorage files,
+    MealAnalysisService analysis, RecipeCalculator calculator, CityContext cityContext) : Controller
 {
     private const string PhotoFolder = "meals";
     private const int DaysPerPage = 7;
@@ -43,12 +46,30 @@ public class MealsController(AppDbContext db, CurrentUser currentUser, IFileStor
 
     public async Task<IActionResult> Details(int id)
     {
-        var meal = await FindOwned(id);
-        return meal is null ? NotFound() : View(meal);
+        var userId = await currentUser.GetIdAsync();
+        var meal = await db.Meals.AsNoTracking()
+            .Include(m => m.Recommendations).ThenInclude(r => r.Recipe)
+            .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+        if (meal is null) return NotFound();
+
+        var city = await cityContext.GetCurrentAsync();
+        var summaries = await calculator.SummarizeManyAsync(meal.Recommendations.Select(r => r.RecipeId).ToList(), city?.Id ?? 0);
+
+        return View(new MealDetailsVm
+        {
+            Meal = meal,
+            Analysis = MealAnalysisService.ReadStored(meal.AnalysisJson),
+            Recommendations = meal.Recommendations
+                .Select(r => new RecommendationVm(r.Recipe, r.Reason, summaries.GetValueOrDefault(r.RecipeId)))
+                .ToList(),
+            AiAvailable = analysis.IsAvailable,
+            CityName = city?.Name,
+        });
     }
 
     public IActionResult Create()
     {
+        ViewBag.AiAvailable = analysis.IsAvailable;
         var now = AppTime.NowLocal;
         return View(new MealFormVm
         {
@@ -60,11 +81,17 @@ public class MealsController(AppDbContext db, CurrentUser currentUser, IFileStor
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(ImageValidator.MaxBytes + 1024 * 1024)]
-    public async Task<IActionResult> Create(MealFormVm vm)
+    public async Task<IActionResult> Create(MealFormVm vm, bool analyze = false)
     {
         if (await ImageValidator.ValidateAsync(vm.Photo) is { } photoError)
             ModelState.AddModelError(nameof(vm.Photo), photoError);
-        if (!ModelState.IsValid) return View(vm);
+        if (analyze && vm.Photo is not { Length: > 0 })
+            ModelState.AddModelError(nameof(vm.Photo), "Для AI-аналізу додайте фото страви");
+        if (!ModelState.IsValid)
+        {
+            ViewBag.AiAvailable = analysis.IsAvailable;
+            return View(vm);
+        }
 
         var meal = new Meal { UserId = await currentUser.GetIdAsync() };
         Apply(vm, meal);
@@ -74,8 +101,34 @@ public class MealsController(AppDbContext db, CurrentUser currentUser, IFileStor
         db.Meals.Add(meal);
         await db.SaveChangesAsync();
 
-        TempData["Success"] = "Прийом їжі додано";
+        if (analyze)
+            await RunAnalysis(meal.Id, "Прийом їжі додано й проаналізовано");
+        else
+            TempData["Success"] = "Прийом їжі додано";
+
         return RedirectToAction(nameof(Details), new { id = meal.Id });
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Analyze(int id)
+    {
+        await RunAnalysis(id, "Аналіз оновлено");
+        return RedirectToAction(nameof(Details), new { id });
+    }
+
+    private async Task RunAnalysis(int mealId, string successMessage)
+    {
+        try
+        {
+            var city = await cityContext.GetCurrentAsync();
+            await analysis.AnalyzeMealAsync(mealId, await currentUser.GetIdAsync(), city?.Id ?? 0, HttpContext.RequestAborted);
+            TempData["Success"] = successMessage;
+        }
+        catch (MealAnalysisException ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
     }
 
     public async Task<IActionResult> Edit(int id)

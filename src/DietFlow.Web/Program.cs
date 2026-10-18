@@ -4,6 +4,7 @@ using System.Text.Unicode;
 using Microsoft.Extensions.WebEncoders;
 using DietFlow.Web.Data;
 using DietFlow.Web.Services;
+using DietFlow.Web.Services.Ai;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +18,16 @@ builder.Services.AddScoped<CityContext>();
 builder.Services.AddScoped<CurrentUser>();
 builder.Services.AddScoped<RecipeCalculator>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+
+builder.Services.Configure<AnthropicOptions>(builder.Configuration.GetSection("Anthropic"));
+builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddSingleton<ClaudeMealAnalyzer>();
+builder.Services.AddHttpClient<GeminiMealAnalyzer>(c => c.Timeout = TimeSpan.FromSeconds(90));
+builder.Services.AddScoped<IMealAnalyzer>(sp =>
+    string.Equals(builder.Configuration["Ai:Provider"], "Claude", StringComparison.OrdinalIgnoreCase)
+        ? sp.GetRequiredService<ClaudeMealAnalyzer>()
+        : sp.GetRequiredService<GeminiMealAnalyzer>());
+builder.Services.AddScoped<MealAnalysisService>();
 
 builder.Services.AddControllersWithViews();
 

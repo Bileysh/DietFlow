@@ -57,3 +57,14 @@ public static class MealTypeText
         _ => t.ToString(),
     };
 }
+
+public record RecommendationVm(Recipe Recipe, string? Reason, DietFlow.Web.Services.RecipeSummary? Summary);
+
+public class MealDetailsVm
+{
+    public Meal Meal { get; init; } = null!;
+    public DietFlow.Web.Services.Ai.MealAnalysis? Analysis { get; init; }
+    public IReadOnlyList<RecommendationVm> Recommendations { get; init; } = [];
+    public bool AiAvailable { get; init; }
+    public string? CityName { get; init; }
+}

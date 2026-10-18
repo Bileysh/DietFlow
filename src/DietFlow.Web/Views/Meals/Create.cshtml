@@ -1,17 +1,27 @@
 @model MealFormVm
 @{
     ViewData["Title"] = "Новий прийом їжі";
+    var aiAvailable = ViewBag.AiAvailable as bool? ?? false;
 }
 
 <h1 class="h3 mb-3">Новий прийом їжі</h1>
-<form asp-action="Create" method="post" enctype="multipart/form-data">
+<form asp-action="Create" method="post" enctype="multipart/form-data" class="ai-form">
     <partial name="_Form" model="Model" />
-    <div class="mt-4">
-        <button type="submit" class="btn btn-primary">Зберегти</button>
+    <div class="mt-4 d-flex flex-wrap gap-2 align-items-center">
+        <button type="submit" name="analyze" value="true" class="btn btn-primary" disabled="@(!aiAvailable)">
+            <span class="spinner-border spinner-border-sm d-none me-1" aria-hidden="true"></span>
+            <span class="label">🤖 Зберегти й проаналізувати фото</span>
+        </button>
+        <button type="submit" class="btn btn-outline-secondary">Зберегти без аналізу</button>
         <a asp-action="Index" class="btn btn-link">Скасувати</a>
     </div>
+    @if (!aiAvailable)
+    {
+        <div class="form-text">AI-аналіз вимкнено: не налаштовано ключ AI-провайдера. Поля можна заповнити вручну.</div>
+    }
 </form>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/ai-form.js" asp-append-version="true"></script>
 }
