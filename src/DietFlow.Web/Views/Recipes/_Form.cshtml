@@ -37,7 +37,7 @@
     </div>
     <div class="col-md-6">
         <label asp-for="Photo" class="form-label"></label>
-        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" />
+        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" data-photo-picker />
         <span asp-validation-for="Photo" class="text-danger small"></span>
         @if (Model.CurrentPhotoPath is not null)
         {

@@ -18,9 +18,9 @@
         <input asp-for="EatenAtLocal" type="datetime-local" class="form-control" />
         <span asp-validation-for="EatenAtLocal" class="text-danger small"></span>
     </div>
-    <div class="col-md-4">
+    <div class="col-12 col-lg-6">
         <label asp-for="Photo" class="form-label"></label>
-        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" />
+        <input asp-for="Photo" type="file" accept="image/jpeg,image/png,image/webp" class="form-control" data-photo-picker />
         <span asp-validation-for="Photo" class="text-danger small"></span>
         @if (Model.CurrentPhotoPath is not null)
         {
@@ -36,7 +36,7 @@
 </div>
 
 <fieldset class="mt-4">
-    <legend class="h6">Аналіз страви <span class="text-muted small fw-normal">(з Дня 4 — автоматично від AI)</span></legend>
+    <legend class="h6">Аналіз страви <span class="text-muted small fw-normal">(заповнює AI за фото або ви вручну)</span></legend>
     <div class="row g-3">
         <div class="col-md-6">
             <label asp-for="DishName" class="form-label"></label>
