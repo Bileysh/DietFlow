@@ -484,3 +484,6 @@ $RECYCLE.BIN/
 # DietFlow
 .env
 **/wwwroot/uploads/
+
+.postman/
+/postman/

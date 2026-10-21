@@ -1,0 +1,882 @@
+{
+  "info": {
+    "name": "DietFlow API v1",
+    "description": "Автотести REST API DietFlow (QA1): CRUD, пагінація (B1), кешування (B9), коди помилок.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "cityId",
+      "value": ""
+    },
+    {
+      "key": "nextLink",
+      "value": ""
+    },
+    {
+      "key": "productId",
+      "value": ""
+    },
+    {
+      "key": "barcode",
+      "value": ""
+    },
+    {
+      "key": "storeId",
+      "value": ""
+    },
+    {
+      "key": "recipeId",
+      "value": ""
+    },
+    {
+      "key": "mealId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Cities",
+      "item": [
+        {
+          "name": "List cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/cities"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const cities = pm.response.json();",
+                  "pm.test(\"Non-empty array\", () => pm.expect(cities).to.be.an(\"array\").that.is.not.empty);",
+                  "const kyiv = cities.find(c => c.name === \"Київ\") || cities[0];",
+                  "pm.collectionVariables.set(\"cityId\", kyiv.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List products (page 1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products?limit=20&cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});",
+                  "const j = pm.response.json();",
+                  "pm.test(\"nextLink present when more items exist\", () => {",
+                  "    if (j.total > j.limit) pm.expect(j.nextLink).to.include(\"skip=20\");",
+                  "});",
+                  "pm.collectionVariables.set(\"nextLink\", j.nextLink || \"\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Follow nextLink (page 2)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products?skip=20&limit=20&cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});",
+                  "pm.test(\"Page 2 starts at skip=20\", () => pm.expect(pm.response.json().skip).to.eql(20));"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const next = pm.collectionVariables.get(\"nextLink\");",
+                  "if (next) pm.request.url = next;"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search products (q=кур)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products?q=%D0%BA%D1%83%D1%80"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"All names contain 'кур'\", () => pm.response.json().items.forEach(p => pm.expect(p.name.toLowerCase()).to.include(\"кур\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limit is clamped to 100",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products?limit=1000"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"limit <= 100\", () => pm.expect(pm.response.json().limit).to.eql(100));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get unknown product -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/999999"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));pm.test(\"ProblemDetails format\", () => { const j = pm.response.json(); pm.expect(j).to.have.property(\"title\"); pm.expect(j).to.have.property(\"status\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create invalid product -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"\",\n  \"kcalPer100g\": 5000\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Validation errors listed\", () => {",
+                  "    const e = pm.response.json().errors;",
+                  "    pm.expect(e).to.have.property(\"Name\");",
+                  "    pm.expect(e).to.have.property(\"KcalPer100g\");",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create product -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman test product {{$timestamp}}\",\n  \"category\": \"Інше\",\n  \"kcalPer100g\": 250,\n  \"proteinPer100g\": 10,\n  \"fatPer100g\": 5,\n  \"carbsPer100g\": 40,\n  \"barcode\": \"PM{{$timestamp}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Location header points to the new product\", () => pm.expect(pm.response.headers.get(\"Location\")).to.match(/\\/api\\/v1\\/products\\/\\d+$/));",
+                  "const p = pm.response.json();",
+                  "pm.test(\"Body echoes the product\", () => pm.expect(p.kcalPer100g).to.eql(250));",
+                  "pm.collectionVariables.set(\"productId\", p.id);",
+                  "pm.collectionVariables.set(\"barcode\", p.barcode);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create duplicate barcode -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/products",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Duplicate\",\n  \"category\": \"Інше\",\n  \"kcalPer100g\": 250,\n  \"proteinPer100g\": 10,\n  \"fatPer100g\": 5,\n  \"carbsPer100g\": 40,\n  \"barcode\": \"{{barcode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));pm.test(\"ProblemDetails format\", () => { const j = pm.response.json(); pm.expect(j).to.have.property(\"title\"); pm.expect(j).to.have.property(\"status\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get created product",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Details shape\", () => pm.expect(pm.response.json()).to.have.all.keys(\"product\", \"prices\", \"usedInRecipes\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cache: warm up",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cache: second GET served from cache",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Age header present (Output Cache hit)\", () => pm.expect(pm.response.headers.has(\"Age\")).to.be.true);"
+                ]
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "setTimeout(() => {}, 1100);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update product -> 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman test product {{$timestamp}}\",\n  \"category\": \"Інше\",\n  \"kcalPer100g\": 300,\n  \"proteinPer100g\": 10,\n  \"fatPer100g\": 5,\n  \"carbsPer100g\": 40,\n  \"barcode\": \"{{barcode}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Updated value returned\", () => pm.expect(pm.response.json().kcalPer100g).to.eql(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cache invalidated after update",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Fresh response (no Age)\", () => pm.expect(pm.response.headers.has(\"Age\")).to.be.false);",
+                  "pm.test(\"New value visible immediately\", () => pm.expect(pm.response.json().product.kcalPer100g).to.eql(300));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Stores & prices",
+      "item": [
+        {
+          "name": "List stores in city",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/stores?cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});",
+                  "pm.test(\"All stores in requested city\", () => pm.response.json().items.forEach(s => pm.expect(s.cityId).to.eql(+pm.collectionVariables.get(\"cityId\"))));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create store -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/stores",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman store {{$timestamp}}\",\n  \"chain\": \"АТБ\",\n  \"address\": \"test\",\n  \"latitude\": 50.45,\n  \"longitude\": 30.52,\n  \"cityId\": {{cityId}}\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"storeId\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set new price -> 201",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices/{{productId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerKg\": 99.9\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update price -> 200",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices/{{productId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerKg\": 88.8\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Price updated\", () => pm.expect(pm.response.json().pricePerKg).to.eql(88.8));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid price -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices/{{productId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pricePerKg\": 0\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Store prices list",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});",
+                  "pm.test(\"Contains our product\", () => pm.expect(pm.response.json().items.map(i => i.productId)).to.include(+pm.collectionVariables.get(\"productId\")));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Recipes",
+      "item": [
+        {
+          "name": "List recipes sorted by cost",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/recipes?cityId={{cityId}}&sort=cost&limit=100"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});",
+                  "const costs = pm.response.json().items.map(r => r.perServing && r.perServing.cost).filter(c => c != null);",
+                  "pm.test(\"Costs ascending\", () => costs.forEach((c, i) => { if (i) pm.expect(c).to.be.at.least(costs[i - 1]); }));",
+                  "pm.test(\"Method serialized as string\", () => pm.expect(pm.response.json().items[0].method).to.be.a(\"string\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create recipe -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/recipes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Тестовий рецепт Postman {{$timestamp}}\",\n  \"method\": \"Baked\",\n  \"cookTimeMinutes\": 15,\n  \"servings\": 2,\n  \"ingredients\": [\n    {\n      \"productId\": {{productId}},\n      \"grams\": 200\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const r = pm.response.json();",
+                  "pm.collectionVariables.set(\"recipeId\", r.recipe.id);",
+                  "pm.test(\"Slug generated (latin)\", () => pm.expect(r.recipe.slug).to.match(/^[a-z0-9-]+$/));",
+                  "pm.test(\"Kcal per serving computed: 200 g x 300 kcal/100 g / 2 servings = 300\", () => pm.expect(r.recipe.perServing.kcal).to.eql(300));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recipe with unknown product -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/recipes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Bad\",\n  \"method\": \"Raw\",\n  \"ingredients\": [\n    {\n      \"productId\": 999999,\n      \"grams\": 100\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete product used in recipe -> 409",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));pm.test(\"ProblemDetails format\", () => { const j = pm.response.json(); pm.expect(j).to.have.property(\"title\"); pm.expect(j).to.have.property(\"status\"); });",
+                  "pm.test(\"Conflict explains which recipes\", () => pm.expect(pm.response.json().detail).to.include(\"Postman\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Recipe cost uses store price",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/recipes/{{recipeId}}?cityId={{cityId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const line = pm.response.json().ingredients[0];",
+                  "pm.test(\"Ingredient has cheapest price\", () => pm.expect(line.pricePerKg).to.not.be.null);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete recipe -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/recipes/{{recipeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Meals",
+      "item": [
+        {
+          "name": "Create meal -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/meals",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"Snack\",\n  \"dishName\": \"Postman snack\",\n  \"kcal\": 150\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "const m = pm.response.json();",
+                  "pm.collectionVariables.set(\"mealId\", m.id);",
+                  "pm.test(\"Not analyzed yet\", () => pm.expect(m.analyzed).to.be.false);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List meals",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals?limit=5"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Analyze without photo -> 422/503",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals/{{mealId}}/analyze"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"422 (no photo) or 503 (AI not configured)\", () => pm.expect(pm.response.code).to.be.oneOf([422, 503]));pm.test(\"ProblemDetails format\", () => { const j = pm.response.json(); pm.expect(j).to.have.property(\"title\"); pm.expect(j).to.have.property(\"status\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete meal -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals/{{mealId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Deleted meal -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals/{{mealId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete product -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete store -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DietFlow.Web.Controllers;
 
-public class StoresController(AppDbContext db, CityContext cityContext) : Controller
+public class StoresController(AppDbContext db, CityContext cityContext, CacheInvalidator cache) : Controller
 {
     public async Task<IActionResult> Index(string? chain)
     {
@@ -62,6 +62,7 @@ public class StoresController(AppDbContext db, CityContext cityContext) : Contro
         Apply(vm, store);
         db.Stores.Add(store);
         await db.SaveChangesAsync();
+        await cache.StoreChangedAsync();
 
         TempData["Success"] = $"Магазин «{store.Name}» додано";
         return RedirectToAction(nameof(Details), new { id = store.Id });
@@ -97,6 +98,7 @@ public class StoresController(AppDbContext db, CityContext cityContext) : Contro
 
         Apply(vm, store);
         await db.SaveChangesAsync();
+        await cache.StoreChangedAsync();
 
         TempData["Success"] = "Зміни збережено";
         return RedirectToAction(nameof(Details), new { id });
@@ -120,6 +122,7 @@ public class StoresController(AppDbContext db, CityContext cityContext) : Contro
 
         db.Stores.Remove(store); 
         await db.SaveChangesAsync();
+        await cache.StoreChangedAsync();
 
         TempData["Success"] = $"Магазин «{store.Name}» видалено";
         return RedirectToAction(nameof(Index));

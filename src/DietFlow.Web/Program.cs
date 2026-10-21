@@ -7,6 +7,8 @@ using DietFlow.Web.Services;
 using DietFlow.Web.Services.Ai;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using Scalar.AspNetCore;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,7 +31,31 @@ builder.Services.AddScoped<IMealAnalyzer>(sp =>
         : sp.GetRequiredService<GeminiMealAnalyzer>());
 builder.Services.AddScoped<MealAnalysisService>();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddScoped<CacheInvalidator>();
+
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+        o.JsonSerializerOptions.Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping;
+    });
+
+builder.Services.AddProblemDetails();
+
+builder.Services.AddOutputCache(o =>
+    o.AddPolicy(CacheTags.Policy, b => b.Expire(TimeSpan.FromSeconds(60)).SetVaryByQuery("*")));
+
+builder.Services.AddOpenApi(o =>
+{
+    o.ShouldInclude = d => d.RelativePath?.StartsWith("api/v1", StringComparison.Ordinal) == true;
+    o.AddDocumentTransformer((doc, _, _) =>
+    {
+        doc.Info.Title = "DietFlow API";
+        doc.Info.Description = "REST API DietFlow: продукти, магазини й ціни, рецепти з розрахунком калорій і вартості, щоденник з AI-аналізом фото. " +
+                               "Списки підтримують пагінацію skip/limit з nextLink; GET-відповіді кешуються на 60 с.";
+        return Task.CompletedTask;
+    });
+});
 
 builder.Services.Configure<WebEncoderOptions>(o => o.TextEncoderSettings = new TextEncoderSettings(UnicodeRanges.All));
 
@@ -63,11 +89,17 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), api => api.UseExceptionHandler());
+
 app.UseRouting();
+app.UseOutputCache();
 
 app.UseAuthorization();
 
 app.MapStaticAssets();
+
+app.MapOpenApi();                     
+app.MapScalarApiReference(o => o.WithTitle("DietFlow API")); 
 
 app.MapControllerRoute(
     name: "default",

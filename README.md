@@ -22,6 +22,31 @@ dotnet run --project src/DietFlow.Web
 
 > Якщо `docker compose` не розпізнається, використовуйте окрему утиліту `docker-compose` з тими самими аргументами.
 
+## REST API (v1)
+Інтерактивна документація: **http://localhost:5213/scalar** · OpenAPI: `/openapi/v1.json`
+
+| Ресурс | Ендпоінти |
+|---|---|
+| Міста | `GET /api/v1/cities` |
+| Продукти | `GET/POST /api/v1/products`, `GET/PUT/DELETE /api/v1/products/{id}` |
+| Магазини, ціни | `GET/POST /api/v1/stores`, `GET/PUT/DELETE /api/v1/stores/{id}`, `GET /api/v1/stores/{id}/prices`, `PUT/DELETE /api/v1/stores/{id}/prices/{productId}` |
+| Рецепти | `GET/POST /api/v1/recipes`, `GET/PUT/DELETE /api/v1/recipes/{id}` (калорії й вартість розраховуються, `?cityId=`) |
+| Щоденник | `GET/POST /api/v1/meals`, `GET/PUT/DELETE /api/v1/meals/{id}`, `POST /api/v1/meals/{id}/photo`, `POST /api/v1/meals/{id}/analyze` |
+
+- **Пагінація:** `?skip=0&limit=20` (limit ≤ 100), відповідь `{ items, total, skip, limit, nextLink }`.
+- **Помилки:** ProblemDetails (RFC 9457) — `400` валідація, `404`, `409` конфлікт, `422`/`503` для AI-аналізу.
+- **Кешування:** GET-відповіді кешуються на 60 с (заголовок `Age`), кеш скидається одразу після змін через API або сайт.
+
+```bash
+curl "http://localhost:5213/api/v1/products?q=кур&limit=5&cityId=1"
+```
+
+### Автотести API (Postman / Newman)
+Колекція: `tests/postman/DietFlow.postman_collection.json` (33 запити, 66 перевірок). Запуск при працюючому застосунку:
+```bash
+npx newman run tests/postman/DietFlow.postman_collection.json -e tests/postman/local.postman_environment.json
+```
+
 ## Модель даних
 | Сутність | Призначення |
 |---|---|

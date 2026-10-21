@@ -1,6 +1,7 @@
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
+using DietFlow.Web.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DietFlow.Web.Controllers;
 
 [Route("Stores/{storeId:int}/Prices")]
-public class StorePricesController(AppDbContext db) : Controller
+public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Controller
 {
     [HttpGet("Create")]
     public async Task<IActionResult> Create(int storeId)
@@ -42,6 +43,7 @@ public class StorePricesController(AppDbContext db) : Controller
 
         db.StorePrices.Add(new StorePrice { StoreId = storeId, ProductId = vm.ProductId, PricePerKg = vm.PricePerKg });
         await db.SaveChangesAsync();
+        await cache.PriceChangedAsync();
 
         TempData["Success"] = "Ціну додано";
         return RedirectToAction("Details", "Stores", new { id = storeId });
@@ -78,6 +80,7 @@ public class StorePricesController(AppDbContext db) : Controller
         sp.PricePerKg = vm.PricePerKg;
         sp.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();
+        await cache.PriceChangedAsync();
 
         TempData["Success"] = $"Ціну на «{sp.Product.Name}» оновлено";
         return RedirectToAction("Details", "Stores", new { id = storeId });
@@ -99,6 +102,7 @@ public class StorePricesController(AppDbContext db) : Controller
 
         db.StorePrices.Remove(sp);
         await db.SaveChangesAsync();
+        await cache.PriceChangedAsync();
 
         TempData["Success"] = $"Ціну на «{sp.Product.Name}» видалено";
         return RedirectToAction("Details", "Stores", new { id = storeId });

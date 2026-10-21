@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DietFlow.Web.Controllers;
 
-public class ProductsController(AppDbContext db, CityContext cityContext) : Controller
+public class ProductsController(AppDbContext db, CityContext cityContext, CacheInvalidator cache) : Controller
 {
     private const int PageSize = 20;
 
@@ -89,6 +89,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext) : Cont
         Apply(vm, product);
         db.Products.Add(product);
         await db.SaveChangesAsync();
+        await cache.ProductChangedAsync();
 
         TempData["Success"] = $"Продукт «{product.Name}» додано";
         return RedirectToAction(nameof(Details), new { id = product.Id });
@@ -120,6 +121,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext) : Cont
 
         Apply(vm, product);
         await db.SaveChangesAsync();
+        await cache.ProductChangedAsync();
 
         TempData["Success"] = "Зміни збережено";
         return RedirectToAction(nameof(Details), new { id });
@@ -151,6 +153,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext) : Cont
 
         db.Products.Remove(product); 
         await db.SaveChangesAsync();
+        await cache.ProductChangedAsync();
 
         TempData["Success"] = $"Продукт «{product.Name}» видалено";
         return RedirectToAction(nameof(Index));
@@ -158,15 +161,11 @@ public class ProductsController(AppDbContext db, CityContext cityContext) : Cont
 
     private async Task ValidateBarcodeUnique(ProductFormVm vm)
     {
-        if (string.IsNullOrWhiteSpace(vm.Barcode)) return;
-        var barcode = vm.Barcode.Trim();
-        if (await db.Products.AnyAsync(p => p.Barcode == barcode && p.Id != vm.Id))
+        if (await DomainRules.BarcodeTakenAsync(db, vm.Barcode, vm.Id))
             ModelState.AddModelError(nameof(vm.Barcode), "Продукт з таким штрихкодом уже існує");
     }
 
-    private Task<List<string>> RecipesUsing(int productId) =>
-        db.RecipeIngredients.Where(ri => ri.ProductId == productId)
-            .Select(ri => ri.Recipe.Title).OrderBy(t => t).ToListAsync();
+    private Task<List<string>> RecipesUsing(int productId) => DomainRules.RecipesUsingProductAsync(db, productId);
 
     private static void Apply(ProductFormVm vm, Product p)
     {

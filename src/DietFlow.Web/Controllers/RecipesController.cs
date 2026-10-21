@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DietFlow.Web.Controllers;
 
 public class RecipesController(
-    AppDbContext db, CityContext cityContext, RecipeCalculator calculator, IFileStorage files) : Controller
+    AppDbContext db, CityContext cityContext, RecipeCalculator calculator, IFileStorage files, CacheInvalidator cache) : Controller
 {
     private const string PhotoFolder = "recipes";
 
@@ -67,13 +67,14 @@ public class RecipesController(
         await ValidateForm(vm);
         if (!ModelState.IsValid) return await FormView(vm);
 
-        var recipe = new Recipe { Slug = await UniqueSlug(vm.Title, null) };
+        var recipe = new Recipe { Slug = await DomainRules.UniqueRecipeSlugAsync(db, vm.Title, null) };
         Apply(vm, recipe);
         if (vm.Photo is { Length: > 0 })
             recipe.PhotoPath = await files.SaveImageAsync(vm.Photo, PhotoFolder);
 
         db.Recipes.Add(recipe);
         await db.SaveChangesAsync();
+        await cache.RecipeChangedAsync();
 
         TempData["Success"] = $"Рецепт «{recipe.Title}» додано";
         return RedirectToAction(nameof(Details), new { id = recipe.Id });
@@ -112,7 +113,7 @@ public class RecipesController(
         }
 
         if (!string.Equals(recipe.Title, vm.Title.Trim(), StringComparison.Ordinal))
-            recipe.Slug = await UniqueSlug(vm.Title, recipe.Id);
+            recipe.Slug = await DomainRules.UniqueRecipeSlugAsync(db, vm.Title, recipe.Id);
 
         Apply(vm, recipe);
 
@@ -123,6 +124,7 @@ public class RecipesController(
             recipe.PhotoPath = null;
 
         await db.SaveChangesAsync();
+        await cache.RecipeChangedAsync();
 
         if (oldPhoto != recipe.PhotoPath) await files.DeleteAsync(oldPhoto);
 
@@ -145,6 +147,7 @@ public class RecipesController(
 
         db.Recipes.Remove(recipe); 
         await db.SaveChangesAsync();
+        await cache.RecipeChangedAsync();
         await files.DeleteAsync(recipe.PhotoPath);
 
         TempData["Success"] = $"Рецепт «{recipe.Title}» видалено";
@@ -170,24 +173,7 @@ public class RecipesController(
         r.Method = vm.Method;
         r.CookTimeMinutes = vm.CookTimeMinutes;
         r.Servings = vm.Servings;
-        
-        var wanted = vm.Ingredients.ToDictionary(i => i.ProductId, i => i.Grams);
-        foreach (var existing in r.Ingredients.ToList())
-        {
-            if (wanted.Remove(existing.ProductId, out var grams)) existing.Grams = grams;
-            else r.Ingredients.Remove(existing);
-        }
-        foreach (var (productId, grams) in wanted)
-            r.Ingredients.Add(new RecipeIngredient { ProductId = productId, Grams = grams });
-    }
-
-    private async Task<string> UniqueSlug(string title, int? exceptId)
-    {
-        var baseSlug = SlugGenerator.Slugify(title);
-        var slug = baseSlug;
-        for (var n = 2; await db.Recipes.AnyAsync(r => r.Slug == slug && r.Id != exceptId); n++)
-            slug = $"{baseSlug}-{n}";
-        return slug;
+        DomainRules.SyncIngredients(r, vm.Ingredients.Select(i => (i.ProductId, i.Grams)));
     }
 
     private async Task<IActionResult> FormView(RecipeFormVm vm)
