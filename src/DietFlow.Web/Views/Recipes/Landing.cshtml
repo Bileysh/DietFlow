@@ -1,0 +1,246 @@
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@using DietFlow.Web.Services
+@using Microsoft.Extensions.Options
+@inject IOptions<SiteOptions> SiteOptions
+@model RecipeDetailsVm
+@{
+    var r = Model.Recipe;
+    var s = Model.Summary;
+    var site = SiteOptions.Value;
+    ViewData["Title"] = r.Title;
+
+    var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
+    var canonical = $"{baseUrl}/recipes/{r.Slug}";
+    var imageUrl = r.PhotoPath is null ? null : baseUrl + r.PhotoPath;
+    var description = r.Description ?? $"{r.Title}: рецепт з калорійністю, БЖВ і вартістю інгредієнтів.";
+    if (s is not null) description += $" {s.Kcal:0} ккал на порцію, {r.CookTimeMinutes} хв.";
+
+    var steps = (r.StepsMarkdown ?? "").Split('\n')
+        .Select(l => Regex.Replace(l.Trim(), @"^\d+[.)]\s*", ""))
+        .Where(l => l.Length > 0).ToList();
+    
+    var jsonLd = JsonSerializer.Serialize(new Dictionary<string, object?>
+    {
+        ["@context"] = "https://schema.org",
+        ["@type"] = "Recipe",
+        ["name"] = r.Title,
+        ["description"] = description,
+        ["image"] = imageUrl is null ? null : new[] { imageUrl },
+        ["url"] = canonical,
+        ["inLanguage"] = "uk",
+        ["recipeCategory"] = CookingMethodText.Name(r.Method),
+        ["totalTime"] = $"PT{r.CookTimeMinutes}M",
+        ["recipeYield"] = $"{r.Servings} порц.",
+        ["recipeIngredient"] = s?.Lines.Select(l => $"{l.Grams:0} г {l.ProductName}").ToArray(),
+        ["recipeInstructions"] = steps.Select(t => new Dictionary<string, string> { ["@type"] = "HowToStep", ["text"] = t }).ToArray(),
+        ["nutrition"] = s is null ? null : new Dictionary<string, string>
+        {
+            ["@type"] = "NutritionInformation",
+            ["calories"] = $"{s.Kcal:0} kcal",
+            ["proteinContent"] = $"{s.Protein:0.#} g",
+            ["fatContent"] = $"{s.Fat:0.#} g",
+            ["carbohydrateContent"] = $"{s.Carbs:0.#} g",
+        },
+    }, new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull });
+
+    var totalCost = s?.Lines.Where(l => l.Cost is not null).Sum(l => l.Cost!.Value);
+}
+
+@section Head {
+    <meta name="description" content="@description" />
+    <link rel="canonical" href="@canonical" />
+    <meta property="og:type" content="article" />
+    <meta property="og:site_name" content="@site.Name" />
+    <meta property="og:title" content="@r.Title" />
+    <meta property="og:description" content="@description" />
+    <meta property="og:url" content="@canonical" />
+    @if (imageUrl is not null)
+    {
+        <meta property="og:image" content="@imageUrl" />
+        <meta name="twitter:card" content="summary_large_image" />
+    }
+    @Html.Raw($"<script type=\"application/ld+json\">{jsonLd}</script>")
+}
+
+<nav id="recipeNav" class="navbar sticky-top bg-white border-bottom py-1 mb-3 recipe-nav" aria-label="Розділи рецепта">
+    <ul class="nav nav-pills small flex-nowrap overflow-auto">
+        <li class="nav-item"><a class="nav-link" href="#overview">Огляд</a></li>
+        <li class="nav-item"><a class="nav-link" href="#nutrition">Поживність</a></li>
+        <li class="nav-item"><a class="nav-link" href="#ingredients">Інгредієнти</a></li>
+        <li class="nav-item"><a class="nav-link" href="#steps">Приготування</a></li>
+        @if (Model.Similar.Count > 0)
+        {
+            <li class="nav-item"><a class="nav-link" href="#similar">Схожі рецепти</a></li>
+        }
+    </ul>
+</nav>
+
+<article itemscope class="recipe-landing">
+    <section id="overview" class="recipe-hero rounded-4 overflow-hidden position-relative mb-5">
+        @{ ViewData["Height"] = "420px"; }
+        <partial name="_Photo" model="r" />
+        <div class="recipe-hero-overlay position-absolute bottom-0 start-0 end-0 p-4 p-md-5 text-white">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2 small">
+                    <li class="breadcrumb-item"><a class="link-light" asp-action="Index">Рецепти</a></li>
+                    <li class="breadcrumb-item active text-white-50" aria-current="page">@r.Title</li>
+                </ol>
+            </nav>
+            <h1 class="display-6 fw-bold mb-2">@r.Title</h1>
+            @if (r.Description is not null)
+            {
+                <p class="lead mb-3">@r.Description</p>
+            }
+            <div class="d-flex flex-wrap gap-2">
+                <span class="badge text-bg-light">@CookingMethodText.Icon(r.Method) @CookingMethodText.Name(r.Method)</span>
+                <span class="badge text-bg-light">⏱ @r.CookTimeMinutes хв</span>
+                <span class="badge text-bg-light">🍽 @r.Servings порц.</span>
+                @if (s is not null)
+                {
+                    <span class="badge text-bg-warning">🔥 @s.Kcal.ToString("0") ккал / порція</span>
+                    @if (s.Cost is { } cost)
+                    {
+                        <span class="badge text-bg-success">≈ @cost.ToString("0.00") грн / порція (@Model.CityName)</span>
+                    }
+                }
+            </div>
+        </div>
+    </section>
+
+    @if (s is not null)
+    {
+        <section id="nutrition" class="mb-5">
+            <h2 class="h4 mb-3">Поживна цінність на порцію</h2>
+            <div class="row g-4 align-items-center">
+                <div class="col-lg-7">
+                    <div class="row g-3 text-center">
+                        @foreach (var (label, value, unit, css) in new[]
+                                  {
+                                      ("Калорії", s.Kcal.ToString("0"), "ккал", "border-warning"),
+                                      ("Білки", s.Protein.ToString("0.#"), "г", "border-primary"),
+                                      ("Жири", s.Fat.ToString("0.#"), "г", "border-danger"),
+                                      ("Вуглеводи", s.Carbs.ToString("0.#"), "г", "border-success"),
+                                  })
+                        {
+                            <div class="col-6">
+                                <div class="border border-2 @css rounded-3 py-3">
+                                    <div class="fs-3 fw-bold">@value <span class="fs-6 fw-normal">@unit</span></div>
+                                    <div class="text-muted small">@label</div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <figure class="mb-0">
+                        <canvas id="macroChart" height="220" aria-label="Частка калорій з білків, жирів і вуглеводів" role="img"
+                                data-protein="@s.Protein" data-fat="@s.Fat" data-carbs="@s.Carbs"></canvas>
+                        <figcaption class="small text-muted text-center mt-2">Звідки калорії: білки й вуглеводи — 4 ккал/г, жири — 9 ккал/г</figcaption>
+                    </figure>
+                </div>
+            </div>
+        </section>
+
+        <section id="ingredients" class="mb-5">
+            <h2 class="h4 mb-3">Інгредієнти <span class="text-muted fs-6">(на @r.Servings порц.)</span></h2>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Продукт</th><th class="text-end">Кількість</th><th class="text-end">ккал</th><th>Де найдешевше (@Model.CityName)</th><th class="text-end">Вартість</th></tr></thead>
+                    <tbody>
+                    @foreach (var line in s.Lines)
+                    {
+                        <tr>
+                            <td><a asp-controller="Products" asp-action="Details" asp-route-id="@line.ProductId">@line.ProductName</a></td>
+                            <td class="text-end">@line.Grams.ToString("0") г</td>
+                            <td class="text-end">@line.Kcal.ToString("0")</td>
+                            <td class="small">
+                                @if (line.CheapestStoreId is { } storeId)
+                                {
+                                    <a asp-controller="Stores" asp-action="Details" asp-route-id="@storeId">@line.CheapestStore</a>
+                                    <span class="text-muted">· @line.PricePerKg?.ToString("0.00") грн/кг</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">немає в продажу</span>
+                                }
+                            </td>
+                            <td class="text-end">@(line.Cost is { } c ? $"{c:0.00} грн" : "—")</td>
+                        </tr>
+                    }
+                    </tbody>
+                    @if (totalCost is > 0)
+                    {
+                        <tfoot><tr class="fw-semibold"><td colspan="4">Разом</td><td class="text-end">@totalCost.Value.ToString("0.00") грн</td></tr></tfoot>
+                    }
+                </table>
+            </div>
+            @if (!s.CostIsComplete)
+            {
+                <div class="alert alert-warning py-2 small">Ціна неповна — у магазинах міста немає: @string.Join(", ", s.MissingPrices)</div>
+            }
+        </section>
+    }
+
+    <section id="steps" class="mb-5">
+        <h2 class="h4 mb-3">Приготування</h2>
+        @if (r.StepsMarkdown is not null)
+        {
+            <div class="recipe-steps fs-6">@MarkdownRenderer.ToHtml(r.StepsMarkdown)</div>
+        }
+        else
+        {
+            <p class="text-muted">Кроки ще не додано.</p>
+        }
+    </section>
+
+    @if (Model.Similar.Count > 0)
+    {
+        <section id="similar" class="mb-5">
+            <h2 class="h4 mb-3">Схожі рецепти</h2>
+            @{ ViewData["Height"] = "180px"; }
+            <div class="row row-cols-1 row-cols-md-3 g-3">
+                @foreach (var card in Model.Similar)
+                {
+                    <div class="col">
+                        <a href="/recipes/@card.Recipe.Slug" class="card h-100 shadow-sm text-decoration-none text-reset">
+                            <partial name="_Photo" model="card.Recipe" />
+                            <div class="card-body">
+                                <h3 class="h6">@card.Recipe.Title</h3>
+                                @if (card.Summary is { } cs)
+                                {
+                                    <div class="small text-muted">@cs.Kcal.ToString("0") ккал · @CookingMethodText.Name(card.Recipe.Method)</div>
+                                }
+                            </div>
+                        </a>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+
+    <div class="text-end small mb-5">
+        <a asp-action="Edit" asp-route-id="@r.Id" class="link-secondary me-3">Редагувати рецепт</a>
+        <a asp-action="Delete" asp-route-id="@r.Id" class="link-danger">Видалити</a>
+    </div>
+</article>
+
+<aside class="recipe-contacts fixed-bottom bg-dark text-white py-2 shadow-lg" aria-label="Контакти">
+    <div class="container d-flex flex-wrap align-items-center justify-content-between gap-2 small">
+        <div class="d-flex flex-wrap gap-3">
+            <strong>@site.Name</strong>
+            <a class="link-light" href="tel:@site.ContactPhone.Replace(" ", "")">📞 @site.ContactPhone</a>
+            <a class="link-light" href="mailto:@site.ContactEmail">✉️ @site.ContactEmail</a>
+            @if (site.TelegramUrl is not null)
+            {
+                <a class="link-light" href="@site.TelegramUrl" rel="noopener">✈️ Telegram</a>
+            }
+        </div>
+        <a class="btn btn-sm btn-success" asp-controller="Meals" asp-action="Create">📷 Проаналізувати свою страву</a>
+    </div>
+</aside>
+
+@section Scripts {
+    <partial name="_ChartJs" />
+    <script src="~/js/recipe-landing.js" asp-append-version="true"></script>
+}

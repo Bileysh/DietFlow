@@ -44,6 +44,33 @@ public class MealsController(
         return View(days);
     }
 
+    [HttpGet]
+    public async Task<IActionResult> WeekStats()
+    {
+        var userId = await currentUser.GetIdAsync();
+        var goal = await db.Users.Where(u => u.Id == userId).Select(u => u.DailyKcalGoal).FirstAsync();
+        var today = DateOnly.FromDateTime(AppTime.NowLocal);
+        var fromUtc = AppTime.ToUtc(today.AddDays(-6).ToDateTime(TimeOnly.MinValue));
+
+        var meals = await db.Meals.AsNoTracking()
+            .Where(m => m.UserId == userId && m.EatenAt >= fromUtc)
+            .Select(m => new { m.EatenAt, m.Kcal, m.HealthScore })
+            .ToListAsync();
+
+        var days = Enumerable.Range(0, 7).Select(i => today.AddDays(i - 6)).Select(day =>
+        {
+            var ofDay = meals.Where(m => DateOnly.FromDateTime(AppTime.ToLocal(m.EatenAt)) == day).ToList();
+            var scores = ofDay.Where(m => m.HealthScore is not null).Select(m => m.HealthScore!.Value).ToList();
+            return new
+            {
+                label = day.ToString("ddd dd.MM"),
+                kcal = ofDay.Sum(m => m.Kcal ?? 0),
+                avgScore = scores.Count > 0 ? Math.Round(scores.Average(), 1) : (double?)null,
+            };
+        });
+        return Json(new { goal, days });
+    }
+
     public async Task<IActionResult> Details(int id)
     {
         var userId = await currentUser.GetIdAsync();

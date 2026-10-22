@@ -122,11 +122,11 @@
             var s = rec.Summary;
             <div class="col">
                 <div class="card h-100 shadow-sm">
-                    <a asp-controller="Recipes" asp-action="Details" asp-route-id="@rec.Recipe.Id">
+                    <a href="/recipes/@rec.Recipe.Slug">
                         <partial name="~/Views/Recipes/_Photo.cshtml" model="rec.Recipe" />
                     </a>
                     <div class="card-body">
-                        <h3 class="h6"><a asp-controller="Recipes" asp-action="Details" asp-route-id="@rec.Recipe.Id" class="text-decoration-none">@rec.Recipe.Title</a></h3>
+                        <h3 class="h6"><a href="/recipes/@rec.Recipe.Slug" class="text-decoration-none">@rec.Recipe.Title</a></h3>
                         <p class="small mb-2">@rec.Reason</p>
                         @if (s is not null)
                         {

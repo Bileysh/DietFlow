@@ -39,3 +39,10 @@ body {
 
 .recipe-steps ol { padding-left: 1.25rem; }
 .recipe-steps li { margin-bottom: .4rem; }
+
+.recipe-hero .recipe-hero-overlay { background: linear-gradient(transparent, rgba(0, 0, 0, .78)); }
+.recipe-hero .breadcrumb-item + .breadcrumb-item::before { color: rgba(255, 255, 255, .6); }
+.recipe-nav .nav-link { white-space: nowrap; }
+.recipe-landing section { scroll-margin-top: 4rem; }
+body:has(.recipe-contacts) { padding-bottom: 4.5rem; }
+body:has(.recipe-contacts) .footer { bottom: 3.5rem; }

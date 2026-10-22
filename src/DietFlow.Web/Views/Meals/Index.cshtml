@@ -10,6 +10,16 @@
     <a asp-action="Create" class="btn btn-primary">+ Прийом їжі</a>
 </div>
 
+@if (page == 1)
+{
+    <section class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="h6 mb-3">Останні 7 днів</h2>
+            <canvas id="weekChart" height="110" role="img" aria-label="Калорії та оцінка корисності за останні 7 днів"></canvas>
+        </div>
+    </section>
+}
+
 @if (Model.Count == 0)
 {
     <p class="text-muted">За цей тиждень записів немає.</p>
@@ -65,3 +75,8 @@
         <a asp-action="Index" asp-route-page="@(page - 1)" class="btn btn-outline-secondary">Наступний тиждень →</a>
     }
 </nav>
+
+@section Scripts {
+    <partial name="_ChartJs" />
+    <script src="~/js/meals-chart.js" asp-append-version="true"></script>
+}

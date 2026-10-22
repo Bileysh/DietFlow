@@ -8,6 +8,14 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/DietFlow.Web.styles.css" asp-append-version="true" />
+    @if (IsSectionDefined("Head"))
+    {
+        @await RenderSectionAsync("Head")
+    }
+    else
+    {
+        <meta name="description" content="DietFlow — AI-аналіз страв за фото, підрахунок калорій і корисні рецепти з найдешевшими інгредієнтами." />
+    }
 </head>
 <body>
     <header>

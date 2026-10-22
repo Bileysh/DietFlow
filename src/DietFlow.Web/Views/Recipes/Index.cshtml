@@ -44,11 +44,11 @@
         var s = card.Summary;
         <div class="col">
             <div class="card h-100 shadow-sm">
-                <a asp-action="Details" asp-route-id="@r.Id">
+                <a href="/recipes/@r.Slug">
                     <partial name="_Photo" model="r" />
                 </a>
                 <div class="card-body">
-                    <h2 class="h6 card-title"><a asp-action="Details" asp-route-id="@r.Id" class="text-decoration-none">@r.Title</a></h2>
+                    <h2 class="h6 card-title"><a href="/recipes/@r.Slug" class="text-decoration-none">@r.Title</a></h2>
                     <div class="small text-muted mb-2">@CookingMethodText.Name(r.Method) · @r.CookTimeMinutes хв</div>
                     @if (s is not null)
                     {
