@@ -20,6 +20,7 @@ public static class DomainRules
     public static async Task<string> UniqueRecipeSlugAsync(AppDbContext db, string title, int? exceptRecipeId)
     {
         var baseSlug = SlugGenerator.Slugify(title);
+        if (baseSlug is "create" or "index") baseSlug += "-recipe";
         var slug = baseSlug;
         for (var n = 2; await db.Recipes.AnyAsync(r => r.Slug == slug && r.Id != exceptRecipeId); n++)
             slug = $"{baseSlug}-{n}";

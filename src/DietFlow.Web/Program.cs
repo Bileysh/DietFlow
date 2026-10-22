@@ -32,8 +32,17 @@ builder.Services.AddScoped<IMealAnalyzer>(sp =>
 builder.Services.AddScoped<MealAnalysisService>();
 
 builder.Services.AddScoped<CacheInvalidator>();
+builder.Services.Configure<SiteOptions>(builder.Configuration.GetSection("Site"));
 
-builder.Services.AddControllersWithViews()
+builder.Services.AddControllersWithViews(o =>
+    {
+        var m = o.ModelBindingMessageProvider;
+        m.SetValueMustNotBeNullAccessor(_ => "Поле обов'язкове.");
+        m.SetMissingKeyOrValueAccessor(() => "Поле обов'язкове.");
+        m.SetAttemptedValueIsInvalidAccessor((value, _) => $"Значення «{value}» некоректне.");
+        m.SetValueIsInvalidAccessor(value => $"Значення «{value}» некоректне.");
+        m.SetNonPropertyAttemptedValueIsInvalidAccessor(value => $"Значення «{value}» некоректне.");
+    })
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
@@ -65,8 +74,21 @@ if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.SetCommandTimeout(TimeSpan.FromMinutes(10));
     db.Database.Migrate();
+    db.Database.SetCommandTimeout(null);
     await DbSeeder.SeedAsync(db, app.Environment.WebRootPath);
+}
+
+if (args.Contains("import-off"))
+{
+    var limitIndex = Array.IndexOf(args, "--limit");
+    int? limit = limitIndex >= 0 && limitIndex + 1 < args.Length && int.TryParse(args[limitIndex + 1], out var l) ? l : null;
+    var importer = new DietFlow.Web.Data.Import.OpenFoodFactsImporter(
+        builder.Configuration.GetConnectionString("Default")!,
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("OpenFoodFacts"));
+    await importer.RunAsync(limit);
+    return;
 }
 
 var appCulture = (CultureInfo)CultureInfo.GetCultureInfo("uk-UA").Clone();

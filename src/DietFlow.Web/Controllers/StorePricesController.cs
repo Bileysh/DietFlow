@@ -17,7 +17,6 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
         var store = await db.Stores.FindAsync(storeId);
         if (store is null) return NotFound();
 
-        await FillAvailableProducts(storeId);
         return View(new StorePriceFormVm { StoreId = storeId, StoreName = store.Name });
     }
 
@@ -37,7 +36,7 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
         if (!ModelState.IsValid)
         {
             vm.StoreName = store.Name;
-            await FillAvailableProducts(storeId);
+            vm.ProductName = await db.Products.Where(p => p.Id == vm.ProductId).Select(p => p.Name).FirstOrDefaultAsync();
             return View(vm);
         }
 
@@ -112,11 +111,4 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
         db.StorePrices.Include(sp => sp.Store).Include(sp => sp.Product)
             .FirstOrDefaultAsync(sp => sp.StoreId == storeId && sp.ProductId == productId);
     
-    private async Task FillAvailableProducts(int storeId)
-    {
-        var products = await db.Products.AsNoTracking()
-            .Where(p => !p.Prices.Any(sp => sp.StoreId == storeId))
-            .OrderBy(p => p.Name).ToListAsync();
-        ViewBag.Products = new SelectList(products, "Id", "Name");
-    }
 }

@@ -38,19 +38,31 @@ public class RecipesController(
 
         return View(new RecipeIndexVm { Items = cards.ToList(), Method = method, MaxKcal = maxKcal, Sort = sort, CityName = city?.Name });
     }
-
+    
     public async Task<IActionResult> Details(int id)
     {
-        var recipe = await db.Recipes.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
+        var slug = await db.Recipes.Where(r => r.Id == id).Select(r => r.Slug).FirstOrDefaultAsync();
+        return slug is null ? NotFound() : RedirectToActionPermanent(nameof(Landing), new { slug });
+    }
+    
+    [HttpGet("/recipes/{slug:regex(^(?!(create|index)$)[[a-z0-9-]]+$)}")]
+    public async Task<IActionResult> Landing(string slug)
+    {
+        var recipe = await db.Recipes.AsNoTracking().FirstOrDefaultAsync(r => r.Slug == slug);
         if (recipe is null) return NotFound();
 
         var city = await cityContext.GetCurrentAsync();
-        return View(new RecipeDetailsVm
-        {
-            Recipe = recipe,
-            Summary = await calculator.SummarizeAsync(id, city?.Id ?? 0),
-            CityName = city?.Name,
-        });
+        var all = await db.Recipes.AsNoTracking().ToListAsync();
+        var summaries = await calculator.SummarizeManyAsync(all.Select(r => r.Id).ToList(), city?.Id ?? 0);
+        var current = summaries.GetValueOrDefault(recipe.Id);
+
+        var similar = all.Where(r => r.Id != recipe.Id)
+            .Select(r => new RecipeCardVm(r, summaries.GetValueOrDefault(r.Id)))
+            .OrderBy(c => c.Recipe.Method == recipe.Method ? 0 : 1)
+            .ThenBy(c => Math.Abs((c.Summary?.Kcal ?? 0) - (current?.Kcal ?? 0)))
+            .Take(3).ToList();
+
+        return View(new RecipeDetailsVm { Recipe = recipe, Summary = current, CityName = city?.Name, Similar = similar });
     }
 
     public async Task<IActionResult> Create()
@@ -77,7 +89,7 @@ public class RecipesController(
         await cache.RecipeChangedAsync();
 
         TempData["Success"] = $"Рецепт «{recipe.Title}» додано";
-        return RedirectToAction(nameof(Details), new { id = recipe.Id });
+        return RedirectToAction(nameof(Landing), new { slug = recipe.Slug });
     }
 
     public async Task<IActionResult> Edit(int id)
@@ -85,7 +97,7 @@ public class RecipesController(
         var r = await db.Recipes.AsNoTracking().Include(x => x.Ingredients).FirstOrDefaultAsync(x => x.Id == id);
         if (r is null) return NotFound();
 
-        await FillProducts();
+        await FillProducts(r.Ingredients.Select(i => i.ProductId));
         return View(new RecipeFormVm
         {
             Id = r.Id, Title = r.Title, Description = r.Description, StepsMarkdown = r.StepsMarkdown,
@@ -129,7 +141,7 @@ public class RecipesController(
         if (oldPhoto != recipe.PhotoPath) await files.DeleteAsync(oldPhoto);
 
         TempData["Success"] = "Зміни збережено";
-        return RedirectToAction(nameof(Details), new { id });
+        return RedirectToAction(nameof(Landing), new { slug = recipe.Slug });
     }
 
     public async Task<IActionResult> Delete(int id)
@@ -179,11 +191,14 @@ public class RecipesController(
     private async Task<IActionResult> FormView(RecipeFormVm vm)
     {
         if (vm.Ingredients.Count == 0) vm.Ingredients.Add(new IngredientRowVm());
-        await FillProducts();
+        await FillProducts(vm.Ingredients.Select(i => i.ProductId));
         return View(vm);
     }
-    private async Task FillProducts() =>
-        ViewBag.Products = new SelectList(
-            await db.Products.AsNoTracking().OrderBy(p => p.Name).Select(p => new { p.Id, p.Name }).ToListAsync(),
-            "Id", "Name");
+
+    private async Task FillProducts(IEnumerable<int>? selectedIds = null)
+    {
+        var ids = (selectedIds ?? []).Where(id => id > 0).Distinct().ToList();
+        ViewBag.ProductNames = await db.Products.AsNoTracking()
+            .Where(p => ids.Contains(p.Id)).ToDictionaryAsync(p => p.Id, p => p.Name);
+    }
 }

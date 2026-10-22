@@ -18,6 +18,8 @@ public class Product
 
     [MaxLength(50)]
     public string? Barcode { get; set; }
+
+    public int SortRank { get; private set; }
     public ICollection<RecipeIngredient> UsedIn { get; set; } = new List<RecipeIngredient>();
     public ICollection<StorePrice> Prices { get; set; } = new List<StorePrice>();
 }

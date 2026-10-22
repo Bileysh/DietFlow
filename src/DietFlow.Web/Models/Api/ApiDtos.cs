@@ -13,6 +13,10 @@ public record ProductDto(
     decimal KcalPer100g, decimal ProteinPer100g, decimal FatPer100g, decimal CarbsPer100g,
     string? Barcode, decimal? MinPricePerKg);
 
+public record ProductSearchItem(int Id, string Text, decimal Kcal, string? Category);
+public record SearchPagination(bool More);
+public record ProductSearchResponse(IReadOnlyList<ProductSearchItem> Results, SearchPagination Pagination);
+
 public record ProductPriceDto(int StoreId, string StoreName, string Chain, int CityId, decimal PricePerKg, DateTime UpdatedAt);
 
 public record ProductDetailsDto(ProductDto Product, IReadOnlyList<ProductPriceDto> Prices, IReadOnlyList<string> UsedInRecipes);

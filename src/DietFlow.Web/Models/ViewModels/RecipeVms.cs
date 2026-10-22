@@ -76,6 +76,7 @@ public class RecipeDetailsVm
     public Recipe Recipe { get; init; } = null!;
     public RecipeSummary? Summary { get; init; }
     public string? CityName { get; init; }
+    public IReadOnlyList<RecipeCardVm> Similar { get; init; } = [];
 }
 
 public static class CookingMethodText

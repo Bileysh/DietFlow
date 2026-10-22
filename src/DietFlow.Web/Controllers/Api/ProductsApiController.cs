@@ -29,12 +29,38 @@ public class ProductsApiController(AppDbContext db, CacheInvalidator cache) : Ap
             "kcal" => query.OrderBy(p => p.KcalPer100g).ThenBy(p => p.Id),
             "-kcal" => query.OrderByDescending(p => p.KcalPer100g).ThenBy(p => p.Id),
             "-protein" => query.OrderByDescending(p => p.ProteinPer100g).ThenBy(p => p.Id),
-            _ => query.OrderBy(p => p.Name).ThenBy(p => p.Id),
+            _ => query.OrderBy(p => p.SortRank).ThenBy(p => p.Name).ThenBy(p => p.Id),
         };
 
         var total = await query.CountAsync();
         var items = await query.Skip(s).Take(l).Select(ToDto(cityId)).ToListAsync();
         return Page(items, total, s, l);
+    }
+    
+    [HttpGet("search")]
+    [OutputCache(PolicyName = CacheTags.Policy, Tags = [CacheTags.Products])]
+    public async Task<ProductSearchResponse> Search(string? term, int page = 1)
+    {
+        const int pageSize = 20;
+        term = term?.Trim() ?? "";
+        if (term.Length < 3) return new ProductSearchResponse([], new SearchPagination(false));
+        page = Math.Max(1, page);
+
+        var escaped = term.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+        var contains = $"%{escaped}%";
+        var startsWith = $"{escaped}%";
+
+        var rows = await db.Products.AsNoTracking()
+            .Where(p => EF.Functions.ILike(p.Name, contains, "\\"))
+            .OrderBy(p => p.SortRank)
+            .ThenBy(p => EF.Functions.ILike(p.Name, startsWith, "\\") ? 0 : 1)
+            .ThenBy(p => p.Name.Length).ThenBy(p => p.Name).ThenBy(p => p.Id)
+            .Skip((page - 1) * pageSize).Take(pageSize + 1) 
+            .Select(p => new ProductSearchItem(p.Id, p.Name, p.KcalPer100g, p.Category))
+            .ToListAsync();
+
+        var more = rows.Count > pageSize;
+        return new ProductSearchResponse(more ? rows[..pageSize] : rows, new SearchPagination(more));
     }
 
     [HttpGet("{id:int}")]

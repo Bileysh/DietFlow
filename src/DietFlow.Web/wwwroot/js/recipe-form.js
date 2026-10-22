@@ -16,7 +16,8 @@
         const index = container.querySelectorAll('.ingredient-row').length;
         const html = template.innerHTML.replaceAll('__i__', index);
         container.insertAdjacentHTML('beforeend', html);
-        container.lastElementChild.querySelector('select')?.focus();
+        window.initProductAutocomplete?.(container.lastElementChild);
+        $(container.lastElementChild).find('select').select2?.('open');
     });
 
     container.addEventListener('click', e => {
@@ -24,7 +25,7 @@
         if (!button) return;
         const rows = container.querySelectorAll('.ingredient-row');
         if (rows.length === 1) {
-            rows[0].querySelector('select').value = '0';
+            $(rows[0].querySelector('select')).val(null).trigger('change');
             rows[0].querySelector('input').value = '';
             return;
         }

@@ -62,7 +62,7 @@ if (next) pm.request.url = next;'''),
 pm.test("All names contain 'кур'", () => pm.response.json().items.forEach(p => pm.expect(p.name.toLowerCase()).to.include("кур")));'''),
     req("Limit is clamped to 100", "GET", "/api/v1/products?limit=1000", STATUS(200) + '''
 pm.test("limit <= 100", () => pm.expect(pm.response.json().limit).to.eql(100));'''),
-    req("Get unknown product -> 404", "GET", "/api/v1/products/999999", STATUS(404) + PROBLEM),
+    req("Get unknown product -> 404", "GET", "/api/v1/products/2147483647", STATUS(404) + PROBLEM),
     req("Create invalid product -> 400", "POST", "/api/v1/products",
         STATUS(400) + '''
 pm.test("Validation errors listed", () => {
@@ -119,7 +119,7 @@ pm.test("Kcal per serving computed: 200 g x 300 kcal/100 g / 2 servings = 300", 
         body={"title": "Тестовий рецепт Postman " + ts, "method": "Baked", "cookTimeMinutes": 15, "servings": 2,
               "ingredients": [{"productId": "{{productId}}", "grams": 200}]}),
     req("Recipe with unknown product -> 400", "POST", "/api/v1/recipes", STATUS(400),
-        body={"title": "Bad", "method": "Raw", "ingredients": [{"productId": 999999, "grams": 100}]}),
+        body={"title": "Bad", "method": "Raw", "ingredients": [{"productId": 2147483647, "grams": 100}]}),
     req("Delete product used in recipe -> 409", "DELETE", "/api/v1/products/{{productId}}", STATUS(409) + PROBLEM + '''
 pm.test("Conflict explains which recipes", () => pm.expect(pm.response.json().detail).to.include("Postman"));'''),
     req("Recipe cost uses store price", "GET", "/api/v1/recipes/{{recipeId}}?cityId={{cityId}}", STATUS(200) + '''

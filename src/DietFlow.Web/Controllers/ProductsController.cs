@@ -29,7 +29,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
             "kcal" => query.OrderBy(p => p.KcalPer100g),
             "kcal_desc" => query.OrderByDescending(p => p.KcalPer100g),
             "protein_desc" => query.OrderByDescending(p => p.ProteinPer100g),
-            _ => query.OrderBy(p => p.Name),
+            _ => query.OrderBy(p => p.SortRank).ThenBy(p => p.Name).ThenBy(p => p.Id),
         };
 
         var total = await query.CountAsync();

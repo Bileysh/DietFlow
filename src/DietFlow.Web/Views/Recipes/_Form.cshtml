@@ -1,6 +1,6 @@
 @model RecipeFormVm
 @{
-    var products = (SelectList)ViewBag.Products;
+    var productNames = ViewBag.ProductNames as Dictionary<int, string> ?? new();
 }
 
 <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
@@ -59,11 +59,11 @@
     {
         <div class="row g-2 mb-2 ingredient-row">
             <div class="col-7">
-                <select name="Ingredients[@i].ProductId" class="form-select" aria-label="Продукт">
-                    <option value="0">— продукт —</option>
-                    @foreach (var p in products)
+                <select name="Ingredients[@i].ProductId" class="form-select" aria-label="Продукт" data-product-autocomplete>
+                    <option value=""></option>
+                    @if (productNames.TryGetValue(Model.Ingredients[i].ProductId, out var selectedName))
                     {
-                        <option value="@p.Value" selected="@(p.Value == Model.Ingredients[i].ProductId.ToString())">@p.Text</option>
+                        <option value="@Model.Ingredients[i].ProductId" selected>@selectedName</option>
                     }
                 </select>
                 <span asp-validation-for="Ingredients[i].ProductId" class="text-danger small"></span>
@@ -84,12 +84,8 @@
 <template id="ingredientTemplate">
     <div class="row g-2 mb-2 ingredient-row">
         <div class="col-7">
-            <select name="Ingredients[__i__].ProductId" class="form-select" aria-label="Продукт">
-                <option value="0">— продукт —</option>
-                @foreach (var p in products)
-                {
-                    <option value="@p.Value">@p.Text</option>
-                }
+            <select name="Ingredients[__i__].ProductId" class="form-select" aria-label="Продукт" data-product-autocomplete>
+                <option value=""></option>
             </select>
         </div>
         <div class="col-3"><input name="Ingredients[__i__].Grams" class="form-control" inputmode="decimal" placeholder="грами" aria-label="Грами" /></div>

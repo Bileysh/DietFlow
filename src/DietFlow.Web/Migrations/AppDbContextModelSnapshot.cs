@@ -20,6 +20,7 @@ namespace DietFlow.Web.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("DietFlow.Web.Models.Entities.AppUser", b =>
@@ -236,13 +237,27 @@ namespace DietFlow.Web.Migrations
                         .HasPrecision(7, 2)
                         .HasColumnType("numeric(7,2)");
 
+                    b.Property<int>("SortRank")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("integer")
+                        .HasComputedColumnSql("CASE WHEN \"Barcode\" IS NULL THEN 0 WHEN \"Name\" ~ '[А-Яа-яЁёЇїІіЄєҐґ]' THEN 1 ELSE 2 END", true);
+
                     b.HasKey("Id");
 
                     b.HasIndex("Barcode")
                         .IsUnique()
                         .HasFilter("\"Barcode\" IS NOT NULL");
 
+                    b.HasIndex("Category");
+
                     b.HasIndex("Name");
+
+                    b.HasIndex("SortRank", "Name", "Id");
+
+                    b.HasIndex(new[] { "Name" }, "IX_Products_Name_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex(new[] { "Name" }, "IX_Products_Name_trgm"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex(new[] { "Name" }, "IX_Products_Name_trgm"), new[] { "gin_trgm_ops" });
 
                     b.ToTable("Products");
                 });

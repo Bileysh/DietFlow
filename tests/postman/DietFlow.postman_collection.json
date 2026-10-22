@@ -173,7 +173,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/999999"
+            "url": "{{baseUrl}}/api/v1/products/2147483647"
           },
           "event": [
             {
@@ -642,7 +642,7 @@
             "url": "{{baseUrl}}/api/v1/recipes",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Bad\",\n  \"method\": \"Raw\",\n  \"ingredients\": [\n    {\n      \"productId\": 999999,\n      \"grams\": 100\n    }\n  ]\n}"
+              "raw": "{\n  \"title\": \"Bad\",\n  \"method\": \"Raw\",\n  \"ingredients\": [\n    {\n      \"productId\": 2147483647,\n      \"grams\": 100\n    }\n  ]\n}"
             }
           },
           "event": [

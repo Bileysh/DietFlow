@@ -17,7 +17,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
 
     protected override void OnModelCreating(ModelBuilder b)
     {
-        base.OnModelCreating(b); 
+        base.OnModelCreating(b);
+        
+        b.HasPostgresExtension("pg_trgm");
 
         b.Entity<Meal>()
             .HasOne(m => m.User).WithMany(u => u.Meals)
@@ -61,6 +63,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<Recipe>().HasIndex(r => r.Slug).IsUnique();
 
         b.Entity<Product>().HasIndex(p => p.Name); 
+        b.Entity<Product>().HasIndex(p => p.Name, "IX_Products_Name_trgm").HasMethod("gin").HasOperators("gin_trgm_ops");
+        b.Entity<Product>().Property(p => p.SortRank).HasComputedColumnSql(
+            "CASE WHEN \"Barcode\" IS NULL THEN 0 WHEN \"Name\" ~ '[А-Яа-яЁёЇїІіЄєҐґ]' THEN 1 ELSE 2 END", stored: true);
+        b.Entity<Product>().HasIndex(p => new { p.SortRank, p.Name, p.Id });
+        b.Entity<Product>().HasIndex(p => p.Category); 
         b.Entity<Product>().HasIndex(p => p.Barcode).IsUnique().HasFilter("\"Barcode\" IS NOT NULL");
         foreach (var prop in new[] { "KcalPer100g", "ProteinPer100g", "FatPer100g", "CarbsPer100g" })
             b.Entity<Product>().Property(prop).HasPrecision(7, 2);

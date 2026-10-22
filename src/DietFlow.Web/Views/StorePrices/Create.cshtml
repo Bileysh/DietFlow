@@ -8,8 +8,12 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger" role="alert"></div>
     <div class="mb-3">
         <label asp-for="ProductId" class="form-label"></label>
-        <select asp-for="ProductId" asp-items="ViewBag.Products" class="form-select">
-            <option value="0">— оберіть продукт —</option>
+        <select asp-for="ProductId" class="form-select" data-product-autocomplete>
+            <option value=""></option>
+            @if (Model.ProductId > 0 && Model.ProductName is not null)
+            {
+                <option value="@Model.ProductId" selected>@Model.ProductName</option>
+            }
         </select>
         <span asp-validation-for="ProductId" class="text-danger small"></span>
     </div>
@@ -24,4 +28,5 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <partial name="_ProductAutocomplete" />
 }

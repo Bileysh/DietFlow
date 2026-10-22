@@ -31,3 +31,10 @@
 | `yalovychyna-tushkovana-z-ovochamy.jpg` | [Beef stew with potatoes and carrots - Massachusetts](https://commons.wikimedia.org/w/index.php?curid=113497337) | Daderot | wikimedia | CC0 1.0 (Public Domain Dedication) |
 | `zapecheni-ovochi-z-nutom.jpg` | [Roasted vegetables](https://www.flickr.com/photos/57873306@N00/37555668016) | Kim Siever | flickr | Public Domain Mark 1.0 |
 | `zapechenyi-losos-z-ovochamy.jpg` | [Salmon, vegetables and mushrooms, red pepper, and mashed potato - Massachusetts](https://commons.wikimedia.org/w/index.php?curid=176023446) | Daderot | wikimedia | CC0 1.0 (Public Domain Dedication) |
+
+# Дані про продукти
+
+Довідник продуктів для autocomplete імпортується з [Open Food Facts](https://world.openfoodfacts.org)
+(база даних — [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/),
+вміст записів — [Database Contents License](https://opendatacommons.org/licenses/dbcl/1-0/)).
+© Open Food Facts contributors. Імпортуються лише назва, група продуктів, калорійність і БЖВ на 100 г, штрихкод.
