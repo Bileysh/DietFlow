@@ -13,6 +13,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<City> Cities => Set<City>();
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<StorePrice> StorePrices => Set<StorePrice>();
+    public DbSet<OfficialPrice> OfficialPrices => Set<OfficialPrice>();
     public DbSet<MealRecommendation> MealRecommendations => Set<MealRecommendation>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -40,9 +41,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
             .HasOne(s => s.City).WithMany(c => c.Stores)
             .HasForeignKey(s => s.CityId).OnDelete(DeleteBehavior.Restrict);
         b.Entity<Store>().HasIndex(s => new { s.CityId, s.Chain });
+        b.Entity<Store>().HasIndex(s => s.OsmRef).IsUnique().HasFilter("\"OsmRef\" IS NOT NULL");
+        b.Entity<Store>().HasIndex(s => new { s.Latitude, s.Longitude });
         b.Entity<City>().HasIndex(c => c.Name).IsUnique();
 
         b.Entity<StorePrice>().HasKey(sp => new { sp.StoreId, sp.ProductId });
+        b.Entity<OfficialPrice>().HasKey(op => new { op.RegionCode, op.ProductId });
+        b.Entity<OfficialPrice>().Property(op => op.PricePerKg).HasPrecision(10, 2);
         b.Entity<StorePrice>()
             .HasOne(sp => sp.Store).WithMany(s => s.Prices)
             .HasForeignKey(sp => sp.StoreId).OnDelete(DeleteBehavior.Cascade);

@@ -71,12 +71,13 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 — DietFlow · ціни демонстраційні
+            &copy; 2026 — DietFlow · магазини: © <a href="https://www.openstreetmap.org/copyright" class="link-secondary">OpenStreetMap</a> · ціни: оцінка за <a href="https://stat.gov.ua/" class="link-secondary">Держстатом</a> (CC BY 4.0), демо або від користувачів
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="~/js/city-detect.js" asp-append-version="true"></script>
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

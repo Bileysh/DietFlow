@@ -38,7 +38,7 @@
     {
         <tr>
             <td><a asp-controller="Products" asp-action="Details" asp-route-id="@sp.ProductId">@sp.Product.Name</a></td>
-            <td class="text-end">@sp.PricePerKg.ToString("0.00")</td>
+            <td class="text-end">@sp.PricePerKg.ToString("0.00") <partial name="_PriceSource" model="(sp.Source, sp.UpdatedAt)" /></td>
             <td class="text-muted small">@sp.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
             <td class="text-end text-nowrap">
                 <a asp-controller="StorePrices" asp-action="Edit" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"

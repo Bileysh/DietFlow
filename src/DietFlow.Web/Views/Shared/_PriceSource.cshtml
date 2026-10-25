@@ -1,0 +1,13 @@
+@model (PriceSource Source, DateTime UpdatedAt)
+@if (Model.Source == PriceSource.User)
+{
+    <span class="badge text-bg-primary" title="Ціну ввела людина, яка бачила її в магазині">👤 @DietFlow.Web.Services.AppTime.ToLocal(Model.UpdatedAt).ToString("dd.MM")</span>
+}
+else if (Model.Source == PriceSource.Stat)
+{
+    <span class="badge text-bg-info-subtle text-info-emphasis" title="Оцінка: середня ціна Держстату по області з поправкою на мережу">📊 Держстат</span>
+}
+else
+{
+    <span class="badge text-bg-light text-muted" title="Згенерована демонстраційна ціна">демо</span>
+}

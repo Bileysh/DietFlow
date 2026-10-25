@@ -19,6 +19,9 @@ public class Store
     public double Longitude { get; set; }
 
     public int CityId { get; set; }
+
+    [MaxLength(32)]
+    public string? OsmRef { get; set; }
     public City City { get; set; } = null!;
 
     public ICollection<StorePrice> Prices { get; set; } = new List<StorePrice>();

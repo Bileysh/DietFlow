@@ -20,7 +20,7 @@ public class ProductIndexVm
     public string? CityName { get; init; }
 }
 
-public record ProductPriceRowVm(int StoreId, string StoreName, string Chain, string? Address, decimal PricePerKg);
+public record ProductPriceRowVm(int StoreId, string StoreName, string Chain, string? Address, decimal PricePerKg, PriceSource Source, DateTime UpdatedAt);
 
 public class ProductDetailsVm
 {
@@ -28,4 +28,7 @@ public class ProductDetailsVm
     public string? CityName { get; init; }
     public IReadOnlyList<ProductPriceRowVm> Prices { get; init; } = [];
     public IReadOnlyList<string> UsedInRecipes { get; init; } = [];
+    public OfficialPriceVm? Official { get; init; }
 }
+
+public record OfficialPriceVm(string RegionName, string StatName, decimal PricePerKg, DateOnly Period);

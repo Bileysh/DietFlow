@@ -16,4 +16,20 @@ public class CitiesController(AppDbContext db, CityContext cityContext) : Contro
 
         return Url.IsLocalUrl(returnUrl) ? LocalRedirect(returnUrl) : RedirectToAction("Index", "Home");
     }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> Detect(double lat, double lng)
+    {
+        if (lat is < -90 or > 90 || lng is < -180 or > 180) return BadRequest();
+
+        var cities = await db.Cities.AsNoTracking().Where(c => c.Stores.Any())
+            .Select(c => new { c.Id, c.Name, c.Latitude, c.Longitude }).ToListAsync();
+        var nearest = cities.MinBy(c => Data.Import.OsmStoresImporter.DistanceKm(lat, lng, c.Latitude, c.Longitude));
+        if (nearest is null) return NotFound();
+
+        cityContext.SetCurrent(nearest.Id);
+        var km = Data.Import.OsmStoresImporter.DistanceKm(lat, lng, nearest.Latitude, nearest.Longitude);
+        return Json(new { id = nearest.Id, name = nearest.Name, distanceKm = Math.Round(km, 1) });
+    }
 }

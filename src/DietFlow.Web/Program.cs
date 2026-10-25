@@ -80,6 +80,27 @@ if (app.Environment.IsDevelopment())
     await DbSeeder.SeedAsync(db, app.Environment.WebRootPath);
 }
 
+if (args.Contains("import-osm-stores"))
+{
+    using var scope = app.Services.CreateScope();
+    var importer = new DietFlow.Web.Data.Import.OsmStoresImporter(
+        scope.ServiceProvider.GetRequiredService<AppDbContext>(),
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("OsmStores"),
+        refresh: args.Contains("--refresh"));
+    await importer.RunAsync();
+    return;
+}
+
+if (args.Contains("import-stat-prices"))
+{
+    using var scope = app.Services.CreateScope();
+    var importer = new DietFlow.Web.Data.Import.StatPricesImporter(
+        scope.ServiceProvider.GetRequiredService<AppDbContext>(),
+        app.Services.GetRequiredService<ILoggerFactory>().CreateLogger("StatPrices"));
+    await importer.RunAsync();
+    return;
+}
+
 if (args.Contains("import-off"))
 {
     var limitIndex = Array.IndexOf(args, "--limit");

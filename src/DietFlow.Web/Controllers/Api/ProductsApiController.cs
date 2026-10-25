@@ -73,7 +73,7 @@ public class ProductsApiController(AppDbContext db, CacheInvalidator cache) : Ap
         var prices = await db.StorePrices.AsNoTracking()
             .Where(sp => sp.ProductId == id && (cityId == null || sp.Store.CityId == cityId))
             .OrderBy(sp => sp.PricePerKg)
-            .Select(sp => new ProductPriceDto(sp.StoreId, sp.Store.Name, sp.Store.Chain, sp.Store.CityId, sp.PricePerKg, sp.UpdatedAt))
+            .Select(sp => new ProductPriceDto(sp.StoreId, sp.Store.Name, sp.Store.Chain, sp.Store.CityId, sp.PricePerKg, sp.UpdatedAt, sp.Source))
             .ToListAsync();
 
         return new ProductDetailsDto(product, prices, await DomainRules.RecipesUsingProductAsync(db, id));

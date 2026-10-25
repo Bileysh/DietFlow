@@ -40,7 +40,7 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
             return View(vm);
         }
 
-        db.StorePrices.Add(new StorePrice { StoreId = storeId, ProductId = vm.ProductId, PricePerKg = vm.PricePerKg });
+        db.StorePrices.Add(new StorePrice { StoreId = storeId, ProductId = vm.ProductId, PricePerKg = vm.PricePerKg, Source = PriceSource.User });
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 
@@ -78,6 +78,7 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
 
         sp.PricePerKg = vm.PricePerKg;
         sp.UpdatedAt = DateTime.UtcNow;
+        sp.Source = PriceSource.User;
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 

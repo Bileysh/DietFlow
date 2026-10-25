@@ -23,6 +23,20 @@ public static class DbSeeder
         ["Фора"] = 1.00m,
         ["Novus"] = 1.07m,
         ["Сільпо"] = 1.15m,
+        ["Рукавичка"] = 1.00m,
+        ["Траш!"] = 0.92m,
+        ["Посад"] = 1.00m,
+        ["Сім23"] = 1.05m,
+        ["Файно Маркет"] = 1.02m,
+        ["Таврія В"] = 1.00m,
+        ["ЕКО маркет"] = 0.97m,
+        ["Близенько"] = 1.08m,
+        ["Spar"] = 1.10m,
+        ["Копійка"] = 0.94m,
+        ["Наш Край"] = 1.00m,
+        ["Ашан"] = 0.95m,
+        ["Metro"] = 0.98m,
+        ["Велмарт"] = 1.03m,
     };
 
     private static readonly Dictionary<string, (string Chain, int Count)[]> StoresByCity = new()
@@ -137,35 +151,7 @@ public static class DbSeeder
         }
 
         if (!await db.StorePrices.AnyAsync())
-        {
-            var products = await db.Products.ToListAsync();
-            var stores = await db.Stores.Include(s => s.City).ToListAsync();
-            var basePrice = ProductsData.ToDictionary(p => p.Name, p => p.Price);
-            var cityFactor = CitiesData.ToDictionary(c => c.Name, c => c.PriceFactor);
-
-            foreach (var store in stores)
-            {
-                foreach (var product in products)
-                {
-                    if (rnd.NextDouble() < 0.15) continue;
-                    if (!basePrice.TryGetValue(product.Name, out var price)) continue;
-
-                    var noise = 1m + (decimal)((rnd.NextDouble() - 0.5) * 0.16); 
-                    var final = price
-                                * ChainFactors.GetValueOrDefault(store.Chain, 1m)
-                                * cityFactor.GetValueOrDefault(store.City.Name, 1m)
-                                * noise;
-
-                    db.StorePrices.Add(new StorePrice
-                    {
-                        StoreId = store.Id,
-                        ProductId = product.Id,
-                        PricePerKg = Math.Round(final, 2),
-                    });
-                }
-            }
-            await db.SaveChangesAsync();
-        }
+            await AddDemoPricesAsync(db, await db.Stores.Include(s => s.City).ToListAsync());
 
         await SeedRecipesAsync(db, webRootPath);
         await SeedDemoMealsAsync(db);
@@ -248,6 +234,39 @@ public static class DbSeeder
             new Meal { UserId = userId, Type = MealType.Breakfast, EatenAt = At(0, 8), DishName = "Омлет зі шпинатом",
                 Kcal = 302, ProteinG = 21, FatG = 22, CarbsG = 5, HealthScore = 8, Verdict = "Білковий сніданок." });
         await db.SaveChangesAsync();
+    }
+    
+    public static decimal ChainFactor(string chain) => ChainFactors.GetValueOrDefault(chain, 1m);
+
+    public static async Task<int> AddDemoPricesAsync(AppDbContext db, IReadOnlyList<Store> stores)
+    {
+        var products = await db.Products.Where(p => p.Barcode == null).ToListAsync();
+        var basePrice = ProductsData.ToDictionary(p => p.Name, p => p.Price);
+        var cityFactor = CitiesData.ToDictionary(c => c.Name, c => c.PriceFactor);
+        var added = 0;
+
+        foreach (var store in stores)
+        {
+            var rnd = new Random(RandomSeed + store.Id);
+            foreach (var product in products)
+            {
+                if (rnd.NextDouble() < 0.15) continue; 
+                if (!basePrice.TryGetValue(product.Name, out var price)) continue;
+
+                var noise = 1m + (decimal)((rnd.NextDouble() - 0.5) * 0.16);
+                var final = price
+                            * ChainFactors.GetValueOrDefault(store.Chain, 1m)
+                            * cityFactor.GetValueOrDefault(store.City?.Name ?? "", 1m)
+                            * noise;
+                db.StorePrices.Add(new StorePrice
+                {
+                    StoreId = store.Id, ProductId = product.Id, PricePerKg = Math.Round(final, 2), Source = PriceSource.Demo,
+                });
+                added++;
+            }
+        }
+        await db.SaveChangesAsync();
+        return added;
     }
 
     public static IReadOnlyCollection<string> KnownChains => ChainFactors.Keys;

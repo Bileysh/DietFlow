@@ -12,5 +12,8 @@ public class City
     public double Latitude { get; set; }
     public double Longitude { get; set; }
 
+    [MaxLength(2)]
+    public string? RegionCode { get; set; }
+
     public ICollection<Store> Stores { get; set; } = new List<Store>();
 }

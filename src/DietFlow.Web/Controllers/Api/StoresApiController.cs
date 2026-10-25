@@ -28,6 +28,33 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
             .ToListAsync();
         return Page(items, total, s, l);
     }
+    
+    [HttpGet("nearby")]
+    public async Task<ActionResult<IReadOnlyList<NearbyStoreDto>>> Nearby(double lat, double lng, double radiusKm = 3, string? chain = null)
+    {
+        if (lat is < -90 or > 90) return FieldError(nameof(lat), "Latitude must be between -90 and 90.");
+        if (lng is < -180 or > 180) return FieldError(nameof(lng), "Longitude must be between -180 and 180.");
+        radiusKm = Math.Clamp(radiusKm, 0.2, 25);
+
+        var dLat = radiusKm / 111.0;
+        var dLng = radiusKm / (111.0 * Math.Max(0.1, Math.Cos(lat * Math.PI / 180)));
+
+        var query = db.Stores.AsNoTracking()
+            .Where(s => s.Latitude >= lat - dLat && s.Latitude <= lat + dLat && s.Longitude >= lng - dLng && s.Longitude <= lng + dLng);
+        if (!string.IsNullOrWhiteSpace(chain)) query = query.Where(s => s.Chain == chain);
+
+        var boxed = await query
+            .Select(s => new { s.Id, s.Name, s.Chain, s.Address, s.Latitude, s.Longitude, s.CityId, CityName = s.City.Name, PriceCount = s.Prices.Count })
+            .ToListAsync();
+
+        return boxed
+            .Select(s => new NearbyStoreDto(s.Id, s.Name, s.Chain, s.Address, s.Latitude, s.Longitude, s.CityId, s.CityName, s.PriceCount,
+                Math.Round(Data.Import.OsmStoresImporter.DistanceKm(lat, lng, s.Latitude, s.Longitude), 2)))
+            .Where(s => s.DistanceKm <= radiusKm)   
+            .OrderBy(s => s.DistanceKm)
+            .Take(300)
+            .ToList();
+    }
 
     [HttpGet("{id:int}")]
     [OutputCache(PolicyName = CacheTags.Policy, Tags = [CacheTags.Stores])]
@@ -89,7 +116,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
         var query = db.StorePrices.AsNoTracking().Where(sp => sp.StoreId == storeId);
         var total = await query.CountAsync();
         var items = await query.OrderBy(sp => sp.Product.Name).ThenBy(sp => sp.ProductId).Skip(s).Take(l)
-            .Select(sp => new StorePriceDto(sp.ProductId, sp.Product.Name, sp.PricePerKg, sp.UpdatedAt))
+            .Select(sp => new StorePriceDto(sp.ProductId, sp.Product.Name, sp.PricePerKg, sp.UpdatedAt, sp.Source))
             .ToListAsync();
         return Page(items, total, s, l);
     }
@@ -112,6 +139,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
         }
         price!.PricePerKg = request.PricePerKg;
         price.UpdatedAt = DateTime.UtcNow;
+        price.Source = PriceSource.User;
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 

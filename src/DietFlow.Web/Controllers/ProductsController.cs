@@ -67,13 +67,20 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
         var prices = await db.StorePrices.AsNoTracking()
             .Where(sp => sp.ProductId == id && sp.Store.CityId == cityId)
             .OrderBy(sp => sp.PricePerKg)
-            .Select(sp => new ProductPriceRowVm(sp.StoreId, sp.Store.Name, sp.Store.Chain, sp.Store.Address, sp.PricePerKg))
+            .Select(sp => new ProductPriceRowVm(sp.StoreId, sp.Store.Name, sp.Store.Chain, sp.Store.Address, sp.PricePerKg, sp.Source, sp.UpdatedAt))
             .ToListAsync();
 
         var recipes = await db.RecipeIngredients.AsNoTracking()
             .Where(ri => ri.ProductId == id).Select(ri => ri.Recipe.Title).OrderBy(t => t).ToListAsync();
 
-        return View(new ProductDetailsVm { Product = product, CityName = city?.Name, Prices = prices, UsedInRecipes = recipes });
+        var region = city?.RegionCode ?? UaRegions.Ukraine;
+        var official = await db.OfficialPrices.AsNoTracking()
+            .Where(o => o.ProductId == id && (o.RegionCode == region || o.RegionCode == UaRegions.Ukraine))
+            .OrderBy(o => o.RegionCode == region ? 0 : 1)
+            .Select(o => new OfficialPriceVm(UaRegions.Names[o.RegionCode], o.StatName, o.PricePerKg, o.Period))
+            .FirstOrDefaultAsync();
+
+        return View(new ProductDetailsVm { Product = product, CityName = city?.Name, Prices = prices, UsedInRecipes = recipes, Official = official });
     }
 
     public IActionResult Create() => View(new ProductFormVm());

@@ -1,7 +1,6 @@
 @model City
 @{
     ViewData["Title"] = $"Мапа магазинів — {Model.Name}";
-    var chains = ViewBag.Chains as List<string> ?? [];
     var productId = ViewBag.ProductId as int?;
     var productName = ViewBag.ProductName as string;
 }
@@ -15,18 +14,24 @@
     <aside class="col-lg-3">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h2 class="h6">Мережі</h2>
-                <div id="chainFilters" class="mb-3">
-                    @foreach (var c in chains)
-                    {
-                        <div class="form-check">
-                            <input class="form-check-input chain-filter" type="checkbox" value="@c" id="chain-@c" checked />
-                            <label class="form-check-label d-flex align-items-center gap-2" for="chain-@c">
-                                <span class="chain-dot" data-chain="@c"></span>@c
-                            </label>
-                        </div>
-                    }
+                <div class="btn-group w-100 mb-2" role="group" aria-label="Режим мапи">
+                    <input type="radio" class="btn-check" name="mapMode" id="modeCity" checked />
+                    <label class="btn btn-outline-primary btn-sm" for="modeCity">🏙 @Model.Name</label>
+                    <input type="radio" class="btn-check" name="mapMode" id="modeNearby" />
+                    <label class="btn btn-outline-primary btn-sm" for="modeNearby">📍 Поруч зі мною</label>
                 </div>
+                <div id="radiusBox" class="d-none mb-3">
+                    <label for="radiusKm" class="form-label small mb-1">Радіус</label>
+                    <select id="radiusKm" class="form-select form-select-sm">
+                        <option value="1">1 км</option>
+                        <option value="3" selected>3 км</option>
+                        <option value="5">5 км</option>
+                        <option value="10">10 км</option>
+                    </select>
+                </div>
+
+                <h2 class="h6">Мережі</h2>
+                <div id="chainFilters" class="mb-3 small chain-filters"></div>
 
                 <h2 class="h6">Ціна на продукт</h2>
                 <select id="productFilter" class="form-select" data-product-autocomplete aria-label="Продукт">

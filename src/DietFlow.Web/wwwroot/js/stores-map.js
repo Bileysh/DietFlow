@@ -8,52 +8,83 @@
         maxZoom: 19,
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
-
     const cluster = L.markerClusterGroup({ maxClusterRadius: 40 });
     map.addLayer(cluster);
 
-    const chainColors = { 'АТБ': '#d6352b', 'Сільпо': '#f28c28', 'Novus': '#2e9e4f', 'Фора': '#7b3fb0', 'Varus': '#1f6fd1' };
-    const chainColor = chain => chainColors[chain] || '#6c757d';
-    document.querySelectorAll('.chain-dot').forEach(d => d.style.background = chainColor(d.dataset.chain));
+    const knownColors = { 'АТБ': '#d6352b', 'Сільпо': '#f28c28', 'Novus': '#2e9e4f', 'Фора': '#7b3fb0', 'Varus': '#1f6fd1' };
+    const chainColor = chain => knownColors[chain] ||
+        `hsl(${[...chain].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7)}, 55%, 45%)`;
 
-    const status = document.getElementById('mapStatus');
-    const nearestInfo = document.getElementById('nearestInfo');
-    let stores = [];         
-    let prices = new Map();   
+    const $ = id => document.getElementById(id);
+    const status = $('mapStatus'), nearestInfo = $('nearestInfo'), chainBox = $('chainFilters');
+    let mode = 'city';
+    let stores = [];
+    let prices = new Map();
+    const hiddenChains = new Set();
+    let userPos = null;
     let userLayer = null;
 
-    async function loadStores() {
+    async function fetchJson(url) {
+        const response = await fetch(url, { headers: { Accept: 'application/json' } });
+        if (!response.ok) throw new Error(`${response.status} ${url}`);
+        return response.json();
+    }
+
+    async function loadCityStores() {
         let url = `/api/v1/stores?cityId=${encodeURIComponent(cityId)}&limit=100`;
         const all = [];
         while (url) {
-            const response = await fetch(url, { headers: { Accept: 'application/json' } });
-            if (!response.ok) throw new Error(response.status);
-            const page = await response.json();
+            const page = await fetchJson(url);
             all.push(...page.items);
-            url = page.nextLink; 
+            url = page.nextLink;
         }
         return all;
     }
 
-    
+    const loadNearbyStores = () =>
+        fetchJson(`/api/v1/stores/nearby?lat=${userPos.lat}&lng=${userPos.lng}&radiusKm=${$('radiusKm').value}`);
+
+    function buildChainFilters() {
+        const counts = new Map();
+        stores.forEach(s => counts.set(s.chain, (counts.get(s.chain) || 0) + 1));
+        chainBox.replaceChildren();
+        [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([chain, n]) => {
+            const id = `chain-${[...chain].map(c => c.charCodeAt(0)).join('-')}`;
+            const wrap = document.createElement('div');
+            wrap.className = 'form-check';
+            const input = document.createElement('input');
+            Object.assign(input, { type: 'checkbox', className: 'form-check-input', id, checked: !hiddenChains.has(chain) });
+            input.addEventListener('change', () => { input.checked ? hiddenChains.delete(chain) : hiddenChains.add(chain); render(); });
+            const label = document.createElement('label');
+            label.className = 'form-check-label d-flex align-items-center gap-2';
+            label.htmlFor = id;
+            const dot = document.createElement('span');
+            dot.className = 'chain-dot';
+            dot.style.background = chainColor(chain);
+            label.append(dot, `${chain} (${n})`);
+            wrap.append(input, label);
+            chainBox.append(wrap);
+        });
+    }
+
     const priceColor = t => `hsl(${Math.round(120 * (1 - t))}, 70%, 42%)`;
 
-    function pinIcon(store, price, min, max) {
+    function pinIcon(store, entry, min, max) {
         const pin = document.createElement('div');
         pin.className = 'store-pin';
-        if (price === undefined) {
+        if (!entry) {
             pin.style.background = chainColor(store.chain);
             pin.textContent = store.chain.slice(0, 2);
         } else {
-            const t = max > min ? (price - min) / (max - min) : 0;
-            pin.style.background = priceColor(t);
+            pin.style.background = priceColor(max > min ? (entry.price - min) / (max - min) : 0);
             pin.classList.add('store-pin-price');
-            pin.textContent = `${Math.round(price)}₴`;
+            if (entry.source === 'User') pin.classList.add('store-pin-user');
+            pin.textContent = `${Math.round(entry.price)}₴`;
         }
         return L.divIcon({ html: pin, className: '', iconSize: null, iconAnchor: [18, 18], popupAnchor: [0, -16] });
     }
 
-    function popupContent(store, price) {
+    function popupContent(store, entry) {
         const box = document.createElement('div');
         const title = document.createElement('a');
         title.href = `/Stores/Details/${store.id}`;
@@ -61,58 +92,68 @@
         title.textContent = store.name;
         const meta = document.createElement('div');
         meta.className = 'small text-muted';
-        meta.textContent = [store.chain, store.address].filter(Boolean).join(' · ');
+        meta.textContent = [store.chain, store.cityName, store.distanceKm !== undefined ? `${store.distanceKm} км від вас` : null]
+            .filter(Boolean).join(' · ');
         box.append(title, meta);
-        if (price !== undefined) {
+        if (entry) {
             const p = document.createElement('div');
             p.className = 'mt-1';
-            p.textContent = `Ціна: ${price.toFixed(2)} грн/кг`;
+            p.textContent = `Ціна: ${entry.price.toFixed(2)} грн/кг ` + ({ User: '👤 від користувача', Stat: '📊 оцінка за Держстатом' }[entry.source] ?? '(демо)');
             box.append(p);
         }
         return box;
     }
 
     function visibleStores() {
-        const chains = new Set([...document.querySelectorAll('.chain-filter:checked')].map(c => c.value));
-        const onlyWithProduct = document.getElementById('onlyWithProduct').checked && prices.size > 0;
-        return stores.filter(s => chains.has(s.chain) && (!onlyWithProduct || prices.has(s.id)));
+        const onlyWithProduct = $('onlyWithProduct').checked && prices.size > 0;
+        return stores.filter(s => !hiddenChains.has(s.chain) && (!onlyWithProduct || prices.has(s.id)));
     }
 
     function render() {
         cluster.clearLayers();
         const list = visibleStores();
-        const values = list.map(s => prices.get(s.id)).filter(v => v !== undefined);
+        const values = list.map(s => prices.get(s.id)?.price).filter(v => v !== undefined);
         const min = Math.min(...values), max = Math.max(...values);
 
         for (const s of list) {
-            const price = prices.get(s.id);
-            const marker = L.marker([s.latitude, s.longitude], { icon: pinIcon(s, price, min, max), title: s.name });
-            marker.bindPopup(() => popupContent(s, price));
-            marker.storeId = s.id;
+            const entry = prices.get(s.id);
+            const marker = L.marker([s.latitude, s.longitude], { icon: pinIcon(s, entry, min, max), title: s.name });
+            marker.bindPopup(() => popupContent(s, entry));
             cluster.addLayer(marker);
         }
 
-        const legend = document.getElementById('priceLegend');
-        legend.classList.toggle('d-none', values.length === 0);
+        $('priceLegend').classList.toggle('d-none', values.length === 0);
         if (values.length) {
-            document.getElementById('priceMin').textContent = `${min.toFixed(2)} грн`;
-            document.getElementById('priceMax').textContent = `${max.toFixed(2)} грн`;
+            $('priceMin').textContent = `${min.toFixed(2)} грн`;
+            $('priceMax').textContent = `${max.toFixed(2)} грн`;
         }
-        status.textContent = `Показано ${list.length} з ${stores.length} магазинів` +
+        const where = mode === 'nearby' ? `у радіусі ${$('radiusKm').value} км` : 'у місті';
+        status.textContent = `Показано ${list.length} з ${stores.length} магазинів ${where}` +
             (prices.size ? ` · продукт є в ${values.length}` : '');
     }
 
-    async function selectProduct(productId) {
+    async function loadPrices() {
         prices = new Map();
+        const productId = $('productFilter').value;
         if (productId) {
-            const response = await fetch(`/api/v1/products/${encodeURIComponent(productId)}?cityId=${encodeURIComponent(cityId)}`);
-            if (response.ok) {
-                const details = await response.json();
-                details.prices.forEach(p => prices.set(p.storeId, p.pricePerKg));
-            }
+            const scope = mode === 'city' ? `?cityId=${encodeURIComponent(cityId)}` : '';
+            const details = await fetchJson(`/api/v1/products/${encodeURIComponent(productId)}${scope}`);
+            details.prices.forEach(p => prices.set(p.storeId, { price: p.pricePerKg, source: p.source }));
         }
-        nearestInfo.textContent = '';
+    }
+
+    async function reload(fit) {
+        status.textContent = 'Завантаження…';
+        try {
+            stores = mode === 'city' ? await loadCityStores() : await loadNearbyStores();
+            await loadPrices();
+        } catch {
+            status.textContent = 'Не вдалося завантажити магазини.';
+            return;
+        }
+        buildChainFilters();
         render();
+        if (fit && stores.length) map.fitBounds(L.latLngBounds(stores.map(s => [s.latitude, s.longitude])), { padding: [40, 40], maxZoom: 15 });
     }
 
     function distanceKm(lat1, lng1, lat2, lng2) {
@@ -122,48 +163,73 @@
         return 2 * R * Math.asin(Math.sqrt(a));
     }
 
-    function showNearest(lat, lng) {
+    function drawUser(extra = []) {
         if (userLayer) map.removeLayer(userLayer);
+        const layers = [L.circleMarker([userPos.lat, userPos.lng], { radius: 8, color: '#0d6efd', fillOpacity: .9 }).bindTooltip('Ви тут')];
+        if (mode === 'nearby') layers.push(L.circle([userPos.lat, userPos.lng], { radius: $('radiusKm').value * 1000, color: '#0d6efd', weight: 1, fillOpacity: .04 }));
+        userLayer = L.layerGroup([...layers, ...extra]).addTo(map);
+    }
+
+    function locate() {
+        return new Promise((resolve, reject) => {
+            if (userPos) return resolve(userPos);
+            if (!navigator.geolocation) return reject(new Error('unsupported'));
+            navigator.geolocation.getCurrentPosition(
+                pos => resolve(userPos = { lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                err => reject(err), { enableHighAccuracy: true, timeout: 10000 });
+        });
+    }
+
+    function geoError(err) {
+        return err?.code === 1 ? 'Доступ до геолокації заборонено. Дозвольте його в налаштуваннях браузера.'
+            : err?.message === 'unsupported' ? 'Браузер не підтримує визначення місцезнаходження.'
+            : 'Не вдалося визначити місцезнаходження.';
+    }
+
+    function showNearest() {
         const candidates = visibleStores().filter(s => prices.size === 0 || prices.has(s.id));
         if (candidates.length === 0) { nearestInfo.textContent = 'Немає магазинів за поточними фільтрами.'; return; }
+        const ranked = candidates.map(s => ({ s, km: distanceKm(userPos.lat, userPos.lng, s.latitude, s.longitude) })).sort((a, b) => a.km - b.km);
+        const nearest = ranked[0];
 
-        const withDistance = candidates.map(s => ({ s, km: distanceKm(lat, lng, s.latitude, s.longitude) }))
-            .sort((a, b) => a.km - b.km);
-        const nearest = withDistance[0];
-
-        userLayer = L.layerGroup([
-            L.circleMarker([lat, lng], { radius: 8, color: '#0d6efd', fillOpacity: .9 }).bindTooltip('Ви тут'),
-            L.polyline([[lat, lng], [nearest.s.latitude, nearest.s.longitude]], { color: '#0d6efd', dashArray: '6 6' }),
-        ]).addTo(map);
-        map.fitBounds([[lat, lng], [nearest.s.latitude, nearest.s.longitude]], { padding: [60, 60], maxZoom: 15 });
+        drawUser([L.polyline([[userPos.lat, userPos.lng], [nearest.s.latitude, nearest.s.longitude]], { color: '#0d6efd', dashArray: '6 6' })]);
+        map.fitBounds([[userPos.lat, userPos.lng], [nearest.s.latitude, nearest.s.longitude]], { padding: [60, 60], maxZoom: 16 });
 
         let text = `Найближчий: ${nearest.s.name} — ${nearest.km.toFixed(1)} км.`;
         if (prices.size) {
-            const cheapest = withDistance.reduce((a, b) => (prices.get(b.s.id) < prices.get(a.s.id) ? b : a));
-            text += ` Найдешевший: ${cheapest.s.name} (${prices.get(cheapest.s.id).toFixed(2)} грн/кг, ${cheapest.km.toFixed(1)} км).`;
+            const cheapest = ranked.reduce((a, b) => (prices.get(b.s.id).price < prices.get(a.s.id).price ? b : a));
+            text += ` Найдешевший: ${cheapest.s.name} (${prices.get(cheapest.s.id).price.toFixed(2)} грн/кг, ${cheapest.km.toFixed(1)} км).`;
         }
-        if (nearest.km > 50) text += ' Ви, схоже, в іншому місті — змініть місто в шапці сайту.';
+        if (mode === 'city' && nearest.km > 50) text += ' Ви, схоже, в іншому місті — увімкніть «Поруч зі мною» або змініть місто.';
         nearestInfo.textContent = text;
     }
 
-    document.getElementById('nearestBtn').addEventListener('click', () => {
-        if (!navigator.geolocation) { nearestInfo.textContent = 'Браузер не підтримує визначення місцезнаходження.'; return; }
+    async function setMode(newMode) {
+        mode = newMode;
+        $(mode === 'nearby' ? 'modeNearby' : 'modeCity').checked = true;
+        $('radiusBox').classList.toggle('d-none', mode !== 'nearby');
+        nearestInfo.textContent = '';
+        if (mode === 'nearby') {
+            try { await locate(); } catch (err) { nearestInfo.textContent = geoError(err); $('modeCity').checked = true; mode = 'city'; $('radiusBox').classList.add('d-none'); return; }
+            await reload(true);
+            drawUser();
+        } else {
+            if (userLayer) { map.removeLayer(userLayer); userLayer = null; }
+            await reload(true);
+        }
+    }
+
+    $('modeCity').addEventListener('change', () => setMode('city'));
+    $('modeNearby').addEventListener('change', () => setMode('nearby'));
+    $('radiusKm').addEventListener('change', () => mode === 'nearby' && reload(true).then(() => drawUser()));
+    $('onlyWithProduct').addEventListener('change', render);
+    window.jQuery?.('#productFilter').on('change', async () => { nearestInfo.textContent = ''; await loadPrices(); render(); });
+    $('nearestBtn').addEventListener('click', async () => {
         nearestInfo.textContent = 'Визначаю місцезнаходження…';
-        navigator.geolocation.getCurrentPosition(
-            pos => showNearest(pos.coords.latitude, pos.coords.longitude),
-            err => nearestInfo.textContent = err.code === err.PERMISSION_DENIED
-                ? 'Доступ до геолокації заборонено. Дозвольте його в налаштуваннях браузера.'
-                : 'Не вдалося визначити місцезнаходження.',
-            { enableHighAccuracy: true, timeout: 10000 });
+        try { await locate(); showNearest(); } catch (err) { nearestInfo.textContent = geoError(err); }
     });
 
-    document.querySelectorAll('.chain-filter').forEach(c => c.addEventListener('change', render));
-    document.getElementById('onlyWithProduct').addEventListener('change', render);
-    $('#productFilter').on('change', e => selectProduct(e.target.value));
+    window.dietflowMap = { map, setUserPosition: (lat, lng) => { userPos = { lat, lng }; }, setMode, showNearest };
 
-    window.dietflowMap = { map, showNearest, selectProduct };
-
-    loadStores()
-        .then(list => { stores = list; return selectProduct(document.getElementById('productFilter').value); })
-        .catch(() => status.textContent = 'Не вдалося завантажити магазини.');
+    reload(true);
 })();

@@ -44,6 +44,16 @@
     }
 </div>
 
+@if (Model.Official is { } o)
+{
+    <div class="alert alert-info py-2 small">
+        📊 Середня ціна за даними Держстату — <strong>@o.PricePerKg.ToString("0.00") грн/кг</strong>
+        (@o.RegionName, @o.Period.ToString("MMMM yyyy", new System.Globalization.CultureInfo("uk-UA")); позиція «@o.StatName»).
+        Ціни в магазинах нижче — оцінка на її основі з поправкою на мережу, якщо їх не ввели користувачі.
+        <a href="https://stat.gov.ua/" class="alert-link" target="_blank" rel="noopener">Держстат</a>, CC BY 4.0.
+    </div>
+}
+
 <h2 class="h5">Де купити — @Model.CityName <a asp-controller="Map" asp-action="Index" asp-route-productId="@p.Id" class="btn btn-sm btn-outline-primary ms-2">🗺 На мапі</a></h2>
 @if (Model.Prices.Count == 0)
 {
@@ -61,7 +71,7 @@ else
                 <td><a asp-controller="Stores" asp-action="Details" asp-route-id="@row.StoreId">@row.StoreName</a></td>
                 <td>@row.Chain</td>
                 <td class="text-muted small">@row.Address</td>
-                <td class="text-end fw-semibold">@row.PricePerKg.ToString("0.00")</td>
+                <td class="text-end fw-semibold">@row.PricePerKg.ToString("0.00") <partial name="_PriceSource" model="(row.Source, row.UpdatedAt)" /></td>
                 <td class="text-end text-muted small">
                     @(row.PricePerKg == cheapest ? "найдешевше" : $"+{(row.PricePerKg / cheapest - 1) * 100:0}%")
                 </td>

@@ -17,7 +17,7 @@ public record ProductSearchItem(int Id, string Text, decimal Kcal, string? Categ
 public record SearchPagination(bool More);
 public record ProductSearchResponse(IReadOnlyList<ProductSearchItem> Results, SearchPagination Pagination);
 
-public record ProductPriceDto(int StoreId, string StoreName, string Chain, int CityId, decimal PricePerKg, DateTime UpdatedAt);
+public record ProductPriceDto(int StoreId, string StoreName, string Chain, int CityId, decimal PricePerKg, DateTime UpdatedAt, PriceSource Source);
 
 public record ProductDetailsDto(ProductDto Product, IReadOnlyList<ProductPriceDto> Prices, IReadOnlyList<string> UsedInRecipes);
 
@@ -39,6 +39,9 @@ public class ProductRequest : IValidatableObject
     }
 }
 
+public record NearbyStoreDto(int Id, string Name, string Chain, string? Address, double Latitude, double Longitude,
+    int CityId, string CityName, int PriceCount, double DistanceKm);
+
 public record StoreDto(int Id, string Name, string Chain, string? Address, double Latitude, double Longitude, int CityId, string CityName, int PriceCount);
 
 public class StoreRequest
@@ -51,7 +54,7 @@ public class StoreRequest
     [Range(1, int.MaxValue)] public int CityId { get; set; }
 }
 
-public record StorePriceDto(int ProductId, string ProductName, decimal PricePerKg, DateTime UpdatedAt);
+public record StorePriceDto(int ProductId, string ProductName, decimal PricePerKg, DateTime UpdatedAt, PriceSource Source = PriceSource.User);
 
 public class PriceRequest
 {

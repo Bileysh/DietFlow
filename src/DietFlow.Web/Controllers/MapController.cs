@@ -13,9 +13,6 @@ public class MapController(AppDbContext db, CityContext cityContext) : Controlle
         var city = await cityContext.GetCurrentAsync();
         if (city is null) return NotFound();
 
-        ViewBag.Chains = await db.Stores.AsNoTracking().Where(s => s.CityId == city.Id)
-            .Select(s => s.Chain).Distinct().OrderBy(c => c).ToListAsync();
-
         if (productId is not null)
         {
             ViewBag.ProductName = await db.Products.AsNoTracking().Where(p => p.Id == productId).Select(p => p.Name).FirstOrDefaultAsync();

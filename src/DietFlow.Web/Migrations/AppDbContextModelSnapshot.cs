@@ -115,6 +115,10 @@ namespace DietFlow.Web.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("RegionCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Name")
@@ -198,6 +202,39 @@ namespace DietFlow.Web.Migrations
                     b.HasIndex("RecipeId");
 
                     b.ToTable("MealRecommendations");
+                });
+
+            modelBuilder.Entity("DietFlow.Web.Models.Entities.OfficialPrice", b =>
+                {
+                    b.Property<string>("RegionCode")
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Period")
+                        .HasColumnType("date");
+
+                    b.Property<decimal>("PricePerKg")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("StatCode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("StatName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("RegionCode", "ProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("OfficialPrices");
                 });
 
             modelBuilder.Entity("DietFlow.Web.Models.Entities.Product", b =>
@@ -358,9 +395,19 @@ namespace DietFlow.Web.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<string>("OsmRef")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("OsmRef")
+                        .IsUnique()
+                        .HasFilter("\"OsmRef\" IS NOT NULL");
+
                     b.HasIndex("CityId", "Chain");
+
+                    b.HasIndex("Latitude", "Longitude");
 
                     b.ToTable("Stores");
                 });
@@ -376,6 +423,9 @@ namespace DietFlow.Web.Migrations
                     b.Property<decimal>("PricePerKg")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -547,6 +597,17 @@ namespace DietFlow.Web.Migrations
                     b.Navigation("Meal");
 
                     b.Navigation("Recipe");
+                });
+
+            modelBuilder.Entity("DietFlow.Web.Models.Entities.OfficialPrice", b =>
+                {
+                    b.HasOne("DietFlow.Web.Models.Entities.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Product");
                 });
 
             modelBuilder.Entity("DietFlow.Web.Models.Entities.RecipeIngredient", b =>

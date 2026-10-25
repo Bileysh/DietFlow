@@ -38,3 +38,15 @@
 (база даних — [Open Database License (ODbL) 1.0](https://opendatacommons.org/licenses/odbl/1-0/),
 вміст записів — [Database Contents License](https://opendatacommons.org/licenses/dbcl/1-0/)).
 © Open Food Facts contributors. Імпортуються лише назва, група продуктів, калорійність і БЖВ на 100 г, штрихкод.
+
+# Магазини
+
+Розташування й адреси супермаркетів — з [OpenStreetMap](https://www.openstreetmap.org/copyright)
+(© OpenStreetMap contributors, [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/)), отримано через Overpass API.
+Тайли мапи — © OpenStreetMap contributors.
+
+## Ціни
+Середні споживчі ціни — [Державна служба статистики України](https://stat.gov.ua/)
+(SDMX API, показник «Середні споживчі ціни на товари (послуги)», [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+Ціни в окремих магазинах — оцінка на основі цих даних з коефіцієнтом мережі, демонстраційні або введені користувачами;
+це не офіційні ціни мереж.
