@@ -40,4 +40,7 @@
         <span asp-validation-for="Longitude" class="text-danger small"></span>
     </div>
 </div>
-<p class="form-text">Координати можна скопіювати з Google Maps (правий клік по точці). На Дні 8 з'явиться вибір точки на мапі.</p>
+<div class="mt-3">
+    <div class="form-text mb-1">Клацніть на мапі або перетягніть маркер, щоб обрати розташування магазину.</div>
+    <div data-store-map data-editable data-lat="@Model.Latitude" data-lng="@Model.Longitude" class="rounded border" style="height:320px"></div>
+</div>

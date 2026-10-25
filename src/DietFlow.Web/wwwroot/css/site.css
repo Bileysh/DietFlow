@@ -46,3 +46,9 @@ body {
 .recipe-landing section { scroll-margin-top: 4rem; }
 body:has(.recipe-contacts) { padding-bottom: 4.5rem; }
 body:has(.recipe-contacts) .footer { bottom: 3.5rem; }
+
+.store-pin { width: 36px; height: 36px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4);
+             color: #fff; font: 600 11px/32px system-ui, sans-serif; text-align: center; white-space: nowrap; overflow: hidden; }
+.store-pin-price { width: 46px; border-radius: 18px; font-size: 11px; }
+.chain-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.price-scale { height: 10px; background: linear-gradient(90deg, hsl(120,70%,42%), hsl(60,70%,42%), hsl(0,70%,42%)); }

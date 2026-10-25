@@ -13,11 +13,12 @@
 - **Щоденник харчування** — прийоми їжі за днями, прогрес до денної норми, графік калорій і корисності за тиждень.
 - **Рецепти** — розрахунок калорій, БЖВ і вартості порції за найнижчими цінами в обраному місті; landing-сторінка кожного рецепта з SEO-розміткою.
 - **Продукти й магазини** — ~2,4 млн продуктів (Open Food Facts) з миттєвим autocomplete, 5 міст, 5 мереж, ціни в магазинах.
+- **Мапа магазинів** — Leaflet + OpenStreetMap: фільтри за мережами й продуктом (маркери з ціною, від найдешевшого до найдорожчого), найближчий магазин за геолокацією.
 - **REST API v1** з пагінацією, кешуванням і автотестами Postman.
 
 ## Стек
 - ASP.NET Core 10 (MVC + Web API), Entity Framework Core 10, PostgreSQL 17 (`pg_trgm`)
-- Bootstrap 5, jQuery, Select2, Chart.js
+- Bootstrap 5, jQuery, Select2, Chart.js, Leaflet + OpenStreetMap
 - Google Gemini API / Claude API (офіційний SDK `Anthropic`)
 - Docker / Docker Compose, Azure for Students (план)
 - Postman + Newman, Scalar (документація API)
@@ -74,6 +75,7 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 | `/Recipes` | каталог рецептів з фільтрами й сортуванням за ціною/калоріями |
 | `/recipes/{slug}` | landing-сторінка рецепта (напр. `/recipes/hrechka-z-kurkoiu-i-brokoli`) |
 | `/Products`, `/Stores` | довідники продуктів, магазинів і цін; перемикач міста в шапці |
+| `/Map` | мапа магазинів міста з фільтрами (`/Map?productId=` — одразу з цінами продукту) |
 | `/scalar` | інтерактивна документація REST API |
 | `/sitemap.xml`, `/robots.txt` | для пошукових систем |
 
@@ -144,7 +146,8 @@ tests/postman/        колекція й оточення Postman
 | C6 | Landing-сторінка рецепта (Bootstrap, контакти постійно на екрані) | ✅ |
 | C7 | SEO: meta, Open Graph, schema.org/Recipe, sitemap, robots | ✅ (аудит Seobility — після деплою) |
 | F1 | Графіки Chart.js (щоденник, БЖВ рецепта) | ✅ |
+| C8 | Мапа магазинів (Leaflet/OSM): фільтри, ціни продукту, найближчий магазин | ✅ |
 | C4 | Docker + Docker Compose | 🟡 перевірка повного стеку — разом із деплоєм |
-| C8, C16, B6, QA3, C21, C22, B2, C12, F3, QA2, C3, C2, C9 | — | ⏳ заплановано |
+| C16, B6, QA3, C21, C22, B2, C12, F3, QA2, C3, C2, C9 | — | ⏳ заплановано |
 
 Джерела фото й даних — у [CREDITS.md](CREDITS.md).

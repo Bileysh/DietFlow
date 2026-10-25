@@ -24,6 +24,8 @@
     </div>
 </div>
 
+<div data-store-map data-lat="@Model.Latitude" data-lng="@Model.Longitude" class="rounded border mb-4" style="height:260px"></div>
+
 <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="h5 mb-0">Ціни (@Model.Prices.Count)</h2>
     <a asp-controller="StorePrices" asp-action="Create" asp-route-storeId="@Model.Id" class="btn btn-sm btn-primary">+ Додати ціну</a>
@@ -48,3 +50,8 @@
     }
     </tbody>
 </table>
+
+@section Scripts {
+    <partial name="_Leaflet" />
+    <script src="~/js/store-location-map.js" asp-append-version="true"></script>
+}

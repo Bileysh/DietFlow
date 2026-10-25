@@ -1,0 +1,65 @@
+@model City
+@{
+    ViewData["Title"] = $"Мапа магазинів — {Model.Name}";
+    var chains = ViewBag.Chains as List<string> ?? [];
+    var productId = ViewBag.ProductId as int?;
+    var productName = ViewBag.ProductName as string;
+}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Мапа магазинів — @Model.Name</h1>
+    <span id="mapStatus" class="small text-muted" aria-live="polite">Завантаження…</span>
+</div>
+
+<div class="row g-3">
+    <aside class="col-lg-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 class="h6">Мережі</h2>
+                <div id="chainFilters" class="mb-3">
+                    @foreach (var c in chains)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input chain-filter" type="checkbox" value="@c" id="chain-@c" checked />
+                            <label class="form-check-label d-flex align-items-center gap-2" for="chain-@c">
+                                <span class="chain-dot" data-chain="@c"></span>@c
+                            </label>
+                        </div>
+                    }
+                </div>
+
+                <h2 class="h6">Ціна на продукт</h2>
+                <select id="productFilter" class="form-select" data-product-autocomplete aria-label="Продукт">
+                    <option value=""></option>
+                    @if (productId is not null)
+                    {
+                        <option value="@productId" selected>@productName</option>
+                    }
+                </select>
+                <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="onlyWithProduct" />
+                    <label class="form-check-label small" for="onlyWithProduct">Лише магазини, де є продукт</label>
+                </div>
+                <div id="priceLegend" class="small mt-2 d-none">
+                    <div class="price-scale rounded"></div>
+                    <div class="d-flex justify-content-between text-muted"><span id="priceMin"></span><span id="priceMax"></span></div>
+                </div>
+
+                <hr />
+                <button id="nearestBtn" type="button" class="btn btn-outline-primary w-100">📍 Найближчий магазин</button>
+                <div id="nearestInfo" class="small mt-2" aria-live="polite"></div>
+            </div>
+        </div>
+    </aside>
+    <div class="col-lg-9">
+        <div id="storesMap" class="rounded shadow-sm border" style="height:70vh;min-height:420px"
+             data-city-id="@Model.Id" data-lat="@Model.Latitude" data-lng="@Model.Longitude"></div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_Leaflet" />
+    <partial name="_LeafletCluster" />
+    <partial name="_ProductAutocomplete" />
+    <script src="~/js/stores-map.js" asp-append-version="true"></script>
+}
