@@ -9,6 +9,8 @@ public class GeminiOptions
 {
     public string? ApiKey { get; set; }
     public string Model { get; set; } = "gemini-flash-latest";
+
+    public string? FallbackModel { get; set; } = "gemini-flash-lite-latest";
 }
 
 public class GeminiMealAnalyzer(HttpClient http, IOptions<GeminiOptions> options, ILogger<GeminiMealAnalyzer> logger) : IMealAnalyzer
@@ -46,17 +48,40 @@ public class GeminiMealAnalyzer(HttpClient http, IOptions<GeminiOptions> options
             },
         };
 
+        var models = new[] { _opt.Model, _opt.FallbackModel }
+            .Where(m => !string.IsNullOrWhiteSpace(m)).Distinct().ToArray();
+
+        for (var i = 0; ; i++)
+        {
+            var model = models[i]!;
+            var isLast = i == models.Length - 1;
+            try
+            {
+                return await SendAsync(model, body, isLast, ct);
+            }
+            catch (MealAnalysisException ex) when (!isLast && ex.CanRetry)
+            {
+                logger.LogWarning("Gemini model {Model} failed ({Message}) — retrying with {Fallback}", model, ex.Message, models[i + 1]);
+            }
+        }
+    }
+
+    private async Task<MealAnalysis> SendAsync(string model, object body, bool isLast, CancellationToken ct)
+    {
         using var request = new HttpRequestMessage(HttpMethod.Post,
-            $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(_opt.Model)}:generateContent")
+            $"https://generativelanguage.googleapis.com/v1beta/models/{Uri.EscapeDataString(model)}:generateContent")
         {
             Content = JsonContent.Create(body),
         };
         request.Headers.Add("x-goog-api-key", _opt.ApiKey);
 
+        using var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        if (!isLast) attemptCts.CancelAfter(TimeSpan.FromSeconds(45));
+
         HttpResponseMessage response;
         try
         {
-            response = await http.SendAsync(request, ct);
+            response = await http.SendAsync(request, attemptCts.Token);
         }
         catch (HttpRequestException ex)
         {
@@ -71,10 +96,10 @@ public class GeminiMealAnalyzer(HttpClient http, IOptions<GeminiOptions> options
         {
             var raw = await response.Content.ReadAsStringAsync(ct);
             if (!response.IsSuccessStatusCode)
-                throw MapError(response.StatusCode, raw);
+                throw MapError(model, response.StatusCode, raw);
 
             var root = JsonNode.Parse(raw);
-            LogUsage(root);
+            LogUsage(model, root);
 
             if (root?["promptFeedback"]?["blockReason"]?.GetValue<string>() is { } blockReason)
             {
@@ -101,24 +126,24 @@ public class GeminiMealAnalyzer(HttpClient http, IOptions<GeminiOptions> options
         }
     }
 
-    private MealAnalysisException MapError(HttpStatusCode status, string raw)
+    private MealAnalysisException MapError(string model, HttpStatusCode status, string raw)
     {
-        logger.LogError("Gemini API error {Status}: {Body}", (int)status, raw);
+        logger.LogError("Gemini API error {Model} {Status}: {Body}", model, (int)status, raw);
         return (int)status switch
         {
             429 => new MealAnalysisException("Вичерпано безкоштовний ліміт запитів до AI. Спробуйте за хвилину або завтра.", canRetry: true),
             400 when raw.Contains("API_KEY_INVALID") => new MealAnalysisException("Ключ Gemini API недійсний — перевірте налаштування.", canRetry: false),
             401 or 403 => new MealAnalysisException("Немає доступу до Gemini API — перевірте ключ і регіон.", canRetry: false),
-            404 => new MealAnalysisException($"Модель «{_opt.Model}» недоступна — змініть Gemini:Model у налаштуваннях.", canRetry: false),
+            404 => new MealAnalysisException($"Модель «{model}» недоступна — змініть Gemini:Model у налаштуваннях.", canRetry: false),
             >= 500 => new MealAnalysisException("Сервіс AI тимчасово недоступний. Спробуйте пізніше.", canRetry: true),
             _ => new MealAnalysisException("AI не зміг обробити фото. Спробуйте інше фото.", canRetry: true),
         };
     }
 
-    private void LogUsage(JsonNode? root)
+    private void LogUsage(string model, JsonNode? root)
     {
         var usage = root?["usageMetadata"];
         logger.LogInformation("Meal analysis: model={Model} in={In} out={Out} thoughts={Thoughts}",
-            _opt.Model, usage?["promptTokenCount"], usage?["candidatesTokenCount"], usage?["thoughtsTokenCount"]);
+            model, usage?["promptTokenCount"], usage?["candidatesTokenCount"], usage?["thoughtsTokenCount"]);
     }
 }
