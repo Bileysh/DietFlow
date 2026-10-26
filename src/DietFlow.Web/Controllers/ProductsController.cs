@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
@@ -83,10 +85,12 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
         return View(new ProductDetailsVm { Product = product, CityName = city?.Name, Prices = prices, UsedInRecipes = recipes, Official = official });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public IActionResult Create() => View(new ProductFormVm());
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Create(ProductFormVm vm)
     {
         await ValidateBarcodeUnique(vm);
@@ -102,6 +106,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
         return RedirectToAction(nameof(Details), new { id = product.Id });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id)
     {
         var p = await db.Products.FindAsync(id);
@@ -117,6 +122,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id, ProductFormVm vm)
     {
         if (id != vm.Id) return BadRequest();
@@ -134,6 +140,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var product = await db.Products.AsNoTracking().FirstOrDefaultAsync(p => p.Id == id);
@@ -145,6 +152,7 @@ public class ProductsController(AppDbContext db, CityContext cityContext, CacheI
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var product = await db.Products.FindAsync(id);

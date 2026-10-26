@@ -5,7 +5,7 @@
 """
 import json, os
 
-def req(name, method, path, tests, body=None, prerequest=None, headers=None):
+def req(name, method, path, tests, body=None, prerequest=None, headers=None, auth=None):
     item = {
         "name": name,
         "request": {
@@ -15,6 +15,10 @@ def req(name, method, path, tests, body=None, prerequest=None, headers=None):
         },
         "event": [{"listen": "test", "script": {"type": "text/javascript", "exec": tests.strip().splitlines()}}],
     }
+    if auth is not None:
+        item["request"]["auth"] = auth
+    elif method == "GET" and not path.startswith("/api/v1/meals"):
+        item["request"]["auth"] = {"type": "noauth"}
     if headers:
         item["request"]["header"] += [{"key": k, "value": v} for k, v in headers.items()]
     if body is not None:
@@ -33,6 +37,9 @@ PAGED = '''pm.test("Paged shape", () => {
     pm.expect(j).to.have.all.keys("items", "total", "skip", "limit", "nextLink");
     pm.expect(j.items.length).to.be.at.most(j.limit);
 });'''
+
+NOAUTH = {"type": "noauth"}
+BEARER = lambda token: {"type": "bearer", "bearer": [{"key": "token", "value": token, "type": "string"}]}
 
 ts = "{{$timestamp}}"
 product = {"name": "Postman test product " + ts, "category": "Інше", "kcalPer100g": 250, "proteinPer100g": 10,
@@ -141,6 +148,13 @@ pm.test("422 (no photo) or 503 (AI not configured)", () => pm.expect(pm.response
     req("Deleted meal -> 404", "GET", "/api/v1/meals/{{mealId}}", STATUS(404)),
 ]
 
+auth = [
+    req("No token -> 401", "GET", "/api/v1/meals", STATUS(401), auth=NOAUTH),
+    req("Invalid token -> 401", "GET", "/api/v1/meals", STATUS(401), auth=BEARER("df_invalid-token")),
+    req("Anonymous write -> 401", "POST", "/api/v1/products", STATUS(401), body={"name": "x"}, auth=NOAUTH),
+    req("Valid token -> 200", "GET", "/api/v1/meals?limit=1", STATUS(200) + PAGED),
+]
+
 cleanup = [
     req("Delete product -> 204", "DELETE", "/api/v1/products/{{productId}}", STATUS(204)),
     req("Delete store -> 204", "DELETE", "/api/v1/stores/{{storeId}}", STATUS(204)),
@@ -149,11 +163,14 @@ cleanup = [
 collection = {
     "info": {
         "name": "DietFlow API v1",
-        "description": "Автотести REST API DietFlow (QA1): CRUD, пагінація (B1), кешування (B9), коди помилок.",
+        "description": "Автотести REST API DietFlow (QA1): CRUD, пагінація (B1), кешування (B9), коди помилок, авторизація (C16). "
+                       "Запис і щоденник потребують персонального API-токена адміністратора: змінна apiToken.",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     },
+    "auth": BEARER("{{apiToken}}"),
     "variable": [{"key": k, "value": ""} for k in ["cityId", "nextLink", "productId", "barcode", "storeId", "recipeId", "mealId"]],
     "item": [
+        {"name": "Auth", "item": auth},
         {"name": "Cities", "item": cities},
         {"name": "Products", "item": products},
         {"name": "Stores & prices", "item": stores},
@@ -167,6 +184,9 @@ here = os.path.dirname(os.path.abspath(__file__))
 with open(os.path.join(here, "DietFlow.postman_collection.json"), "w", encoding="utf-8") as f:
     json.dump(collection, f, ensure_ascii=False, indent=2)
 with open(os.path.join(here, "local.postman_environment.json"), "w", encoding="utf-8") as f:
-    json.dump({"name": "DietFlow local", "values": [{"key": "baseUrl", "value": "http://localhost:5213", "enabled": True}]},
+    json.dump({"name": "DietFlow local", "values": [
+        {"key": "baseUrl", "value": "http://localhost:5213", "enabled": True},
+        {"key": "apiToken", "value": "", "type": "secret", "enabled": True},
+    ]},
               f, ensure_ascii=False, indent=2)
 print("requests:", sum(len(g["item"]) for g in collection["item"]))

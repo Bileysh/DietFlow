@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
@@ -65,6 +67,7 @@ public class RecipesController(
         return View(new RecipeDetailsVm { Recipe = recipe, Summary = current, CityName = city?.Name, Similar = similar });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Create()
     {
         await FillProducts();
@@ -74,6 +77,7 @@ public class RecipesController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(ImageValidator.MaxBytes + 1024 * 1024)] 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Create(RecipeFormVm vm)
     {
         await ValidateForm(vm);
@@ -92,6 +96,7 @@ public class RecipesController(
         return RedirectToAction(nameof(Landing), new { slug = recipe.Slug });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id)
     {
         var r = await db.Recipes.AsNoTracking().Include(x => x.Ingredients).FirstOrDefaultAsync(x => x.Id == id);
@@ -110,6 +115,7 @@ public class RecipesController(
     [HttpPost]
     [ValidateAntiForgeryToken]
     [RequestSizeLimit(ImageValidator.MaxBytes + 1024 * 1024)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id, RecipeFormVm vm)
     {
         if (id != vm.Id) return BadRequest();
@@ -144,6 +150,7 @@ public class RecipesController(
         return RedirectToAction(nameof(Landing), new { slug = recipe.Slug });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var recipe = await db.Recipes.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id);
@@ -152,6 +159,7 @@ public class RecipesController(
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var recipe = await db.Recipes.FindAsync(id);

@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
@@ -8,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace DietFlow.Web.Controllers;
 
+[Authorize]
 public class MealsController(
     AppDbContext db, CurrentUser currentUser, IFileStorage files,
     MealAnalysisService analysis, RecipeCalculator calculator, CityContext cityContext) : Controller

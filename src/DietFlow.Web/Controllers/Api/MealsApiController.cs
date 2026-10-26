@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Api;
 using DietFlow.Web.Models.Entities;
@@ -11,6 +13,7 @@ namespace DietFlow.Web.Controllers.Api;
 
 [Route("api/v1/meals")]
 [Tags("Meals (diary)")]
+[Authorize]
 public class MealsApiController(
     AppDbContext db, CurrentUser currentUser, IFileStorage files, MealAnalysisService analysis) : ApiControllerBase
 {
@@ -100,6 +103,10 @@ public class MealsApiController(
         try
         {
             await analysis.AnalyzeMealAsync(id, userId, cityId ?? 0, HttpContext.RequestAborted);
+        }
+        catch (AnalysisLimitException ex)
+        {
+            return Problem(detail: ex.Message, title: "Daily AI analysis limit reached", statusCode: StatusCodes.Status429TooManyRequests);
         }
         catch (MealAnalysisException ex)
         {

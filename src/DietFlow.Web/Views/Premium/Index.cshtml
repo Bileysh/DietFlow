@@ -1,0 +1,61 @@
+@{
+    ViewData["Title"] = "Плани Free і Premium";
+    var isPremium = User.FindFirst(AppClaims.Plan)?.Value == nameof(SubscriptionPlan.Premium);
+}
+
+<h1 class="h3 mb-1">Плани DietFlow</h1>
+<p class="text-muted">Premium у навчальному проєкті вмикається демо-кнопкою, без оплати.</p>
+
+@if (ViewBag.Feature is string)
+{
+    <div class="alert alert-warning">Ця функція доступна на плані <strong>Premium</strong>.</div>
+}
+
+<div class="row g-4">
+    <div class="col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h5">Free</h2>
+                <div class="fs-3 fw-semibold mb-3">0 грн</div>
+                <ul class="mb-0">
+                    <li>Щоденник харчування з фото</li>
+                    <li><strong>@ViewBag.FreeDailyAnalyses</strong> AI-аналізів фото на день</li>
+                    <li>Рецепти, калорії, ціни й мапа магазинів</li>
+                    <li>REST API з персональними токенами</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card h-100 border-warning">
+            <div class="card-body">
+                <h2 class="h5">Premium ⭐</h2>
+                <div class="fs-3 fw-semibold mb-3">демо</div>
+                <ul>
+                    <li>Усе з Free</li>
+                    <li>AI-аналіз фото <strong>без обмежень</strong></li>
+                    <li><strong>Тижневий план харчування</strong>: 7 днів × 3 прийоми під вашу норму калорій,
+                        з найдешевшими рецептами у вашому місті і списком покупок</li>
+                </ul>
+                @if (User.Identity?.IsAuthenticated != true)
+                {
+                    <a asp-controller="Account" asp-action="Login" asp-route-returnUrl="/Premium" class="btn btn-warning">Увійти, щоб активувати</a>
+                }
+                else if (isPremium)
+                {
+                    <a asp-controller="MealPlan" asp-action="Index" class="btn btn-warning">Відкрити тижневий план</a>
+                }
+                else
+                {
+                    <form asp-controller="Profile" asp-action="Plan" method="post">
+                        <button type="submit" name="plan" value="@SubscriptionPlan.Premium" class="btn btn-warning">Активувати Premium (демо)</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<p class="small text-muted mt-4">Технічно плани — це feature flags (<code>Microsoft.FeatureManagement</code>):
+    флаги <code>UnlimitedAiAnalysis</code> і <code>WeeklyMealPlan</code> увімкнені для групи «Premium» у конфігурації,
+    тож доступ до функцій змінюється без зміни коду.</p>

@@ -38,3 +38,10 @@ public class MealAnalysisException(string userMessage, bool canRetry, Exception?
 {
     public bool CanRetry { get; } = canRetry;
 }
+
+public class AnalysisLimitException(int limit)
+    : MealAnalysisException($"На плані Free доступно {limit} AI-аналізів на день — ліміт на сьогодні вичерпано. " +
+                            "Premium знімає обмеження.", canRetry: false)
+{
+    public int Limit { get; } = limit;
+}

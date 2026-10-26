@@ -5,7 +5,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Рецепти</h1>
-    <a asp-action="Create" class="btn btn-primary">+ Додати рецепт</a>
+    @if (User.IsInRole(AppRoles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">+ Додати рецепт</a>
+    }
 </div>
 
 <form method="get" class="row g-2 mb-3">

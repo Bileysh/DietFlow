@@ -54,7 +54,7 @@ public class StoreRequest
     [Range(1, int.MaxValue)] public int CityId { get; set; }
 }
 
-public record StorePriceDto(int ProductId, string ProductName, decimal PricePerKg, DateTime UpdatedAt, PriceSource Source = PriceSource.User);
+public record StorePriceDto(int ProductId, string ProductName, decimal PricePerKg, DateTime UpdatedAt, PriceSource Source = PriceSource.Manual);
 
 public class PriceRequest
 {

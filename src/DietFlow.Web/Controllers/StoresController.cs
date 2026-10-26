@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
@@ -40,6 +42,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
         return store is null ? NotFound() : View(store);
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Create()
     {
         var city = await cityContext.GetCurrentAsync();
@@ -49,6 +52,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Create(StoreFormVm vm)
     {
         await ValidateCity(vm);
@@ -68,6 +72,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
         return RedirectToAction(nameof(Details), new { id = store.Id });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id)
     {
         var s = await db.Stores.FindAsync(id);
@@ -83,6 +88,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Edit(int id, StoreFormVm vm)
     {
         if (id != vm.Id) return BadRequest();
@@ -104,6 +110,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
         return RedirectToAction(nameof(Details), new { id });
     }
 
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var store = await db.Stores.AsNoTracking().Include(s => s.City).FirstOrDefaultAsync(s => s.Id == id);
@@ -115,6 +122,7 @@ public class StoresController(AppDbContext db, CityContext cityContext, CacheInv
 
     [HttpPost, ActionName("Delete")]
     [ValidateAntiForgeryToken]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DeleteConfirmed(int id)
     {
         var store = await db.Stores.FindAsync(id);

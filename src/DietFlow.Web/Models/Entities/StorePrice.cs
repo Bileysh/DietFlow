@@ -3,7 +3,7 @@ namespace DietFlow.Web.Models.Entities;
 public enum PriceSource
 {
     Demo = 0,
-    User = 1,
+    Manual = 1,
     Stat = 2,
 }
 

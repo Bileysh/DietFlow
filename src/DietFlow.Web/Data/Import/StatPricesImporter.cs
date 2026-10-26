@@ -95,7 +95,7 @@ public class StatPricesImporter(AppDbContext db, ILogger logger)
         var productIds = official.Keys.Select(k => k.ProductId).ToHashSet();
 
         var prices = await db.StorePrices
-            .Where(sp => sp.Source != PriceSource.User && productIds.Contains(sp.ProductId))
+            .Where(sp => sp.Source != PriceSource.Manual && productIds.Contains(sp.ProductId))
             .Select(sp => new { Price = sp, sp.Store.Chain, sp.Store.City.RegionCode })
             .ToListAsync(ct);
 

@@ -19,14 +19,14 @@
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
             <div class="container-fluid">
                 <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">🥗 DietFlow</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
                         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Меню">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Meals" asp-action="Index">Щоденник</a>
@@ -43,8 +43,42 @@
                         <li class="nav-item">
                             <a class="nav-link text-dark" asp-controller="Map" asp-action="Index">Мапа</a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-dark" asp-controller="MealPlan" asp-action="Index">Тижневий план <span class="badge text-bg-warning">⭐</span></a>
+                        </li>
                     </ul>
                     @await Component.InvokeAsync("CitySelector")
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="dropdown ms-lg-2 mt-2 mt-lg-0">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                👤 <span class="d-inline-block text-truncate align-bottom" style="max-width:150px">@(User.FindFirst(AppClaims.DisplayName)?.Value ?? User.Identity.Name)</span>
+                                @if (User.FindFirst(AppClaims.Plan)?.Value == nameof(SubscriptionPlan.Premium))
+                                {
+                                    <span class="badge text-bg-warning">Premium</span>
+                                }
+                                @if (User.IsInRole(AppRoles.Admin))
+                                {
+                                    <span class="badge text-bg-dark">адмін</span>
+                                }
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" asp-controller="Profile" asp-action="Index">Профіль і API-токени</a></li>
+                                <li><a class="dropdown-item" asp-controller="Premium" asp-action="Index">Плани Free / Premium</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form asp-controller="Account" asp-action="Logout" method="post">
+                                        <button type="submit" class="dropdown-item">Вийти</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <a class="btn btn-sm btn-primary ms-lg-2 mt-2 mt-lg-0" asp-controller="Account" asp-action="Login"
+                           asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)">Увійти</a>
+                    }
                 </div>
             </div>
         </nav>
@@ -71,7 +105,7 @@
 
     <footer class="border-top footer text-muted">
         <div class="container">
-            &copy; 2026 — DietFlow · магазини: © <a href="https://www.openstreetmap.org/copyright" class="link-secondary">OpenStreetMap</a> · ціни: оцінка за <a href="https://stat.gov.ua/" class="link-secondary">Держстатом</a> (CC BY 4.0), демо або від користувачів
+            &copy; 2026 — DietFlow · магазини: © <a href="https://www.openstreetmap.org/copyright" class="link-secondary">OpenStreetMap</a> · ціни: оцінка за <a href="https://stat.gov.ua/" class="link-secondary">Держстатом</a> (CC BY 4.0) або перевірені адміністратором
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

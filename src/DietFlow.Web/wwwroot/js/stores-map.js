@@ -78,7 +78,7 @@
         } else {
             pin.style.background = priceColor(max > min ? (entry.price - min) / (max - min) : 0);
             pin.classList.add('store-pin-price');
-            if (entry.source === 'User') pin.classList.add('store-pin-user');
+            if (entry.source === 'Manual') pin.classList.add('store-pin-manual');
             pin.textContent = `${Math.round(entry.price)}₴`;
         }
         return L.divIcon({ html: pin, className: '', iconSize: null, iconAnchor: [18, 18], popupAnchor: [0, -16] });
@@ -98,7 +98,7 @@
         if (entry) {
             const p = document.createElement('div');
             p.className = 'mt-1';
-            p.textContent = `Ціна: ${entry.price.toFixed(2)} грн/кг ` + ({ User: '👤 від користувача', Stat: '📊 оцінка за Держстатом' }[entry.source] ?? '(демо)');
+            p.textContent = `Ціна: ${entry.price.toFixed(2)} грн/кг ` + ({ Manual: '✓ перевірено адміністратором', Stat: '📊 оцінка за Держстатом' }[entry.source] ?? '(демо)');
             box.append(p);
         }
         return box;

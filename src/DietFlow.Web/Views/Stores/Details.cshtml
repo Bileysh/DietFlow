@@ -19,8 +19,11 @@
         </div>
     </div>
     <div class="text-nowrap">
-        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Змінити</a>
-        <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">Видалити</a>
+        @if (User.IsInRole(AppRoles.Admin))
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Змінити</a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-outline-danger">Видалити</a>
+        }
     </div>
 </div>
 
@@ -28,7 +31,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-2">
     <h2 class="h5 mb-0">Ціни (@Model.Prices.Count)</h2>
-    <a asp-controller="StorePrices" asp-action="Create" asp-route-storeId="@Model.Id" class="btn btn-sm btn-primary">+ Додати ціну</a>
+    @if (User.IsInRole(AppRoles.Admin))
+    {
+        <a asp-controller="StorePrices" asp-action="Create" asp-route-storeId="@Model.Id" class="btn btn-sm btn-primary">+ Додати ціну</a>
+    }
 </div>
 
 <table class="table table-sm table-hover align-middle">
@@ -41,10 +47,13 @@
             <td class="text-end">@sp.PricePerKg.ToString("0.00") <partial name="_PriceSource" model="(sp.Source, sp.UpdatedAt)" /></td>
             <td class="text-muted small">@sp.UpdatedAt.ToLocalTime().ToString("dd.MM.yyyy HH:mm")</td>
             <td class="text-end text-nowrap">
-                <a asp-controller="StorePrices" asp-action="Edit" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
-                   class="btn btn-sm btn-outline-secondary">Змінити</a>
-                <a asp-controller="StorePrices" asp-action="Delete" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
-                   class="btn btn-sm btn-outline-danger">×</a>
+                @if (User.IsInRole(AppRoles.Admin))
+                {
+                    <a asp-controller="StorePrices" asp-action="Edit" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
+                       class="btn btn-sm btn-outline-secondary">Змінити</a>
+                    <a asp-controller="StorePrices" asp-action="Delete" asp-route-storeId="@Model.Id" asp-route-productId="@sp.ProductId"
+                       class="btn btn-sm btn-outline-danger">×</a>
+                }
             </td>
         </tr>
     }

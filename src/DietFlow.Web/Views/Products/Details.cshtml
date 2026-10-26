@@ -21,8 +21,11 @@
         }
     </div>
     <div class="text-nowrap">
-        <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-secondary">Змінити</a>
-        <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-outline-danger">Видалити</a>
+        @if (User.IsInRole(AppRoles.Admin))
+        {
+            <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-outline-secondary">Змінити</a>
+            <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-outline-danger">Видалити</a>
+        }
     </div>
 </div>
 

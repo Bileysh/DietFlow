@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Api;
 using DietFlow.Web.Models.Entities;
@@ -83,6 +85,7 @@ public class ProductsApiController(AppDbContext db, CacheInvalidator cache) : Ap
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<ProductDto>> Create(ProductRequest request)
     {
         if (await DomainRules.BarcodeTakenAsync(db, request.Barcode, 0))
@@ -100,6 +103,7 @@ public class ProductsApiController(AppDbContext db, CacheInvalidator cache) : Ap
     [HttpPut("{id:int}")]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<ProductDto>> Update(int id, ProductRequest request)
     {
         var product = await db.Products.FindAsync(id);
@@ -117,6 +121,7 @@ public class ProductsApiController(AppDbContext db, CacheInvalidator cache) : Ap
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var product = await db.Products.FindAsync(id);

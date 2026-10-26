@@ -1,16 +1,11 @@
-using DietFlow.Web.Data;
-using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace DietFlow.Web.Services;
 
-public class CurrentUser(AppDbContext db)
+public class CurrentUser(IHttpContextAccessor http)
 {
-    private string? _id;
+    public string? Id => http.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    public async Task<string> GetIdAsync()
-    {
-        _id ??= await db.Users.Where(u => u.Email == DbSeeder.DemoUserEmail).Select(u => u.Id).FirstOrDefaultAsync()
-                ?? throw new InvalidOperationException("Демо-користувача не знайдено — сідер не виконався?");
-        return _id;
-    }
+    public Task<string> GetIdAsync() =>
+        Task.FromResult(Id ?? throw new InvalidOperationException("Користувач не увійшов — дія має бути позначена [Authorize]."));
 }

@@ -1,0 +1,51 @@
+@model LoginVm
+@{
+    ViewData["Title"] = "Вхід";
+}
+
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h4 mb-1">Вхід у DietFlow</h1>
+                <p class="text-muted small">Щоденник харчування, AI-аналіз фото і тижневий план доступні після входу.
+                    Рецепти, продукти й мапа магазинів — відкриті для всіх.</p>
+
+                @if (Model.Error is not null)
+                {
+                    <div class="alert alert-danger small">@Model.Error</div>
+                }
+
+                @foreach (var (name, displayName) in Model.Providers)
+                {
+                    <form asp-action="ExternalLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="mb-2">
+                        <input type="hidden" name="provider" value="@name" />
+                        <button type="submit" class="btn btn-outline-dark w-100 py-2">
+                            <span class="fw-bold" style="color:#4285F4">G</span> Увійти через @displayName
+                        </button>
+                    </form>
+                }
+
+                @if (Model.Providers.Count == 0)
+                {
+                    <div class="alert alert-warning small mb-2">
+                        Вхід через Google не налаштовано: задайте <code>Authentication:Google:ClientId</code> і
+                        <code>Authentication:Google:ClientSecret</code> у user-secrets.
+                    </div>
+                }
+
+                @if (Model.DemoLoginAvailable)
+                {
+                    <hr />
+                    <p class="small text-muted mb-2">Лише в режимі розробки — вхід без Google:</p>
+                    <form asp-action="DemoLogin" asp-route-returnUrl="@Model.ReturnUrl" method="post" class="d-flex gap-2">
+                        <button type="submit" name="admin" value="true" class="btn btn-sm btn-secondary flex-fill">Демо-адмін</button>
+                        <button type="submit" name="admin" value="false" class="btn btn-sm btn-outline-secondary flex-fill">Демо-користувач</button>
+                    </form>
+                }
+
+                <p class="small text-muted mt-3 mb-0">Ми отримуємо від Google лише ім'я та email. Паролі DietFlow не зберігає.</p>
+            </div>
+        </div>
+    </div>
+</div>

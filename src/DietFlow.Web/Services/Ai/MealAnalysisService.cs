@@ -8,7 +8,7 @@ namespace DietFlow.Web.Services.Ai;
 
 
 public class MealAnalysisService(
-    AppDbContext db, IMealAnalyzer analyzer, RecipeCalculator calculator, IFileStorage files)
+    AppDbContext db, IMealAnalyzer analyzer, RecipeCalculator calculator, IFileStorage files, AnalysisQuotaService quota)
 {
     public bool IsAvailable => analyzer.IsConfigured;
     public string ProviderName => analyzer.ProviderName;
@@ -24,10 +24,14 @@ public class MealAnalysisService(
         var mediaType = ImageValidator.DetectMediaType(image)
                         ?? throw new MealAnalysisException("Фото має бути у форматі JPEG, PNG або WebP.", canRetry: false);
 
+        var limits = await quota.GetAsync(userId, ct);
+        if (limits.Exhausted) throw new AnalysisLimitException(limits.Limit);
+
         var catalog = await BuildCatalogAsync(cityId, ct);
         var analysis = await analyzer.AnalyzeAsync(image, mediaType, catalog, ct);
 
         Apply(meal, analysis, catalog.Select(c => c.Id).ToHashSet());
+        db.AiAnalysisLogs.Add(new AiAnalysisLog { UserId = userId });
         await db.SaveChangesAsync(ct);
     }
 

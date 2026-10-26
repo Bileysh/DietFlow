@@ -220,8 +220,11 @@
     }
 
     <div class="text-end small mb-5">
-        <a asp-action="Edit" asp-route-id="@r.Id" class="link-secondary me-3">Редагувати рецепт</a>
-        <a asp-action="Delete" asp-route-id="@r.Id" class="link-danger">Видалити</a>
+        @if (User.IsInRole(AppRoles.Admin))
+        {
+            <a asp-action="Edit" asp-route-id="@r.Id" class="link-secondary me-3">Редагувати рецепт</a>
+            <a asp-action="Delete" asp-route-id="@r.Id" class="link-danger">Видалити</a>
+        }
     </div>
 </article>
 

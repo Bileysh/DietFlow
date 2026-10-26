@@ -14,6 +14,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
     public DbSet<Store> Stores => Set<Store>();
     public DbSet<StorePrice> StorePrices => Set<StorePrice>();
     public DbSet<OfficialPrice> OfficialPrices => Set<OfficialPrice>();
+    public DbSet<ApiToken> ApiTokens => Set<ApiToken>();
+    public DbSet<AiAnalysisLog> AiAnalysisLogs => Set<AiAnalysisLog>();
     public DbSet<MealRecommendation> MealRecommendations => Set<MealRecommendation>();
 
     protected override void OnModelCreating(ModelBuilder b)
@@ -46,6 +48,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<City>().HasIndex(c => c.Name).IsUnique();
 
         b.Entity<StorePrice>().HasKey(sp => new { sp.StoreId, sp.ProductId });
+        b.Entity<ApiToken>().HasIndex(t => t.TokenHash).IsUnique();
+        b.Entity<ApiToken>().HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
+        b.Entity<AiAnalysisLog>().HasIndex(l => new { l.UserId, l.CreatedAt });
+        b.Entity<AiAnalysisLog>().HasOne<AppUser>().WithMany().HasForeignKey(l => l.UserId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<OfficialPrice>().HasKey(op => new { op.RegionCode, op.ProductId });
         b.Entity<OfficialPrice>().Property(op => op.PricePerKg).HasPrecision(10, 2);
         b.Entity<StorePrice>()

@@ -8,6 +8,12 @@ using DietFlow.Web.Services.Ai;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
+using DietFlow.Web.Models.Entities;
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.FeatureManagement;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,6 +24,57 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CityContext>();
 builder.Services.AddScoped<CurrentUser>();
+builder.Services.AddScoped<UserAccountService>();
+builder.Services.AddScoped<ApiTokenService>();
+builder.Services.AddScoped<AnalysisQuotaService>();
+builder.Services.AddScoped<WeeklyPlanService>();
+
+builder.Services.AddIdentityCore<AppUser>(o => o.User.RequireUniqueEmail = true)
+    .AddRoles<IdentityRole>()
+    .AddEntityFrameworkStores<AppDbContext>()
+    .AddSignInManager()
+    .AddClaimsPrincipalFactory<AppClaimsPrincipalFactory>();
+
+var authentication = builder.Services.AddAuthentication(o =>
+    {
+        o.DefaultScheme = "Smart";
+        o.DefaultChallengeScheme = "Smart";
+        o.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+    })
+    .AddPolicyScheme("Smart", displayName: null, o => o.ForwardDefaultSelector = ctx =>
+        ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? ApiTokenAuthenticationHandler.SchemeName
+            : IdentityConstants.ApplicationScheme)
+    .AddScheme<AuthenticationSchemeOptions, ApiTokenAuthenticationHandler>(ApiTokenAuthenticationHandler.SchemeName, null);
+authentication.AddIdentityCookies();
+
+var google = builder.Configuration.GetSection("Authentication:Google");
+if (!string.IsNullOrWhiteSpace(google["ClientId"]) && !string.IsNullOrWhiteSpace(google["ClientSecret"]))
+{
+    authentication.AddGoogle(o =>
+    {
+        o.ClientId = google["ClientId"]!;
+        o.ClientSecret = google["ClientSecret"]!;
+        o.SignInScheme = IdentityConstants.ExternalScheme;
+    });
+}
+
+builder.Services.ConfigureApplicationCookie(o =>
+{
+    o.LoginPath = "/Account/Login";
+    o.AccessDeniedPath = "/Account/AccessDenied";
+    o.ExpireTimeSpan = TimeSpan.FromDays(14);
+    o.SlidingExpiration = true;
+    o.Events.OnRedirectToLogin = ctx => ApiStatusOrRedirect(ctx, StatusCodes.Status401Unauthorized);
+    o.Events.OnRedirectToAccessDenied = ctx => ApiStatusOrRedirect(ctx, StatusCodes.Status403Forbidden);
+});
+builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
+builder.Services.AddAuthorization();
+
+builder.Services.AddFeatureManagement()
+    .WithTargeting<UserTargetingContextAccessor>()
+    .UseDisabledFeaturesHandler((features, ctx) =>
+        ctx.Result = new RedirectToActionResult("Index", "Premium", new { feature = features.FirstOrDefault() }));
 builder.Services.AddScoped<RecipeCalculator>();
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
 
@@ -143,9 +200,9 @@ app.UseStaticFiles(new StaticFileOptions
 app.UseWhen(ctx => ctx.Request.Path.StartsWithSegments("/api"), api => api.UseExceptionHandler());
 
 app.UseRouting();
-app.UseOutputCache();
-
+app.UseAuthentication();
 app.UseAuthorization();
+app.UseOutputCache();
 
 app.MapStaticAssets();
 
@@ -157,5 +214,17 @@ app.MapControllerRoute(
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
-
 app.Run();
+
+static Task ApiStatusOrRedirect(Microsoft.AspNetCore.Authentication.RedirectContext<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions> ctx, int status)
+{
+    if (ctx.Request.Path.StartsWithSegments("/api"))
+    {
+        ctx.Response.StatusCode = status;
+        return Task.CompletedTask;
+    }
+    ctx.Response.Redirect(ctx.RedirectUri);
+    return Task.CompletedTask;
+}
+
+public partial class Program;

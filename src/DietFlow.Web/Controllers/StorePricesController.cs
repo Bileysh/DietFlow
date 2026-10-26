@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
@@ -9,6 +11,7 @@ using Microsoft.EntityFrameworkCore;
 namespace DietFlow.Web.Controllers;
 
 [Route("Stores/{storeId:int}/Prices")]
+[Authorize(Roles = AppRoles.Admin)]
 public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Controller
 {
     [HttpGet("Create")]
@@ -40,7 +43,7 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
             return View(vm);
         }
 
-        db.StorePrices.Add(new StorePrice { StoreId = storeId, ProductId = vm.ProductId, PricePerKg = vm.PricePerKg, Source = PriceSource.User });
+        db.StorePrices.Add(new StorePrice { StoreId = storeId, ProductId = vm.ProductId, PricePerKg = vm.PricePerKg, Source = PriceSource.Manual });
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 
@@ -78,7 +81,7 @@ public class StorePricesController(AppDbContext db, CacheInvalidator cache) : Co
 
         sp.PricePerKg = vm.PricePerKg;
         sp.UpdatedAt = DateTime.UtcNow;
-        sp.Source = PriceSource.User;
+        sp.Source = PriceSource.Manual;
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 

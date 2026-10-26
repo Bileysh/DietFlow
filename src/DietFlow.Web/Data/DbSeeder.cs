@@ -102,12 +102,14 @@ public static class DbSeeder
     ];
 
     public const string DemoUserEmail = "demo@dietflow.local";
+    public const string DemoFreeUserEmail = "free@dietflow.local";
 
     public static async Task SeedAsync(AppDbContext db, string webRootPath)
     {
         var rnd = new Random(RandomSeed);
 
-        await SeedDemoUserAsync(db);
+        await SeedDemoUserAsync(db, DemoUserEmail, "Демо-користувач");
+        await SeedDemoUserAsync(db, DemoFreeUserEmail, "Демо-користувач (без прав адміна)");
 
         if (!await db.Cities.AnyAsync())
         {
@@ -157,17 +159,18 @@ public static class DbSeeder
         await SeedDemoMealsAsync(db);
     }
 
-    private static async Task SeedDemoUserAsync(AppDbContext db)
+    private static async Task SeedDemoUserAsync(AppDbContext db, string email, string displayName)
     {
-        if (await db.Users.AnyAsync(u => u.Email == DemoUserEmail)) return;
+        if (await db.Users.AnyAsync(u => u.Email == email)) return;
 
         db.Users.Add(new AppUser
         {
-            UserName = DemoUserEmail,
-            NormalizedUserName = DemoUserEmail.ToUpperInvariant(),
-            Email = DemoUserEmail,
-            NormalizedEmail = DemoUserEmail.ToUpperInvariant(),
-            DisplayName = "Демо-користувач",
+            UserName = email,
+            NormalizedUserName = email.ToUpperInvariant(),
+            Email = email,
+            NormalizedEmail = email.ToUpperInvariant(),
+            EmailConfirmed = true,
+            DisplayName = displayName,
             SecurityStamp = Guid.NewGuid().ToString(),
             DailyKcalGoal = 2000,
         });

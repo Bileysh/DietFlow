@@ -1,7 +1,7 @@
 @model (PriceSource Source, DateTime UpdatedAt)
-@if (Model.Source == PriceSource.User)
+@if (Model.Source == PriceSource.Manual)
 {
-    <span class="badge text-bg-primary" title="Ціну ввела людина, яка бачила її в магазині">👤 @DietFlow.Web.Services.AppTime.ToLocal(Model.UpdatedAt).ToString("dd.MM")</span>
+    <span class="badge text-bg-success" title="Ціну перевірив і ввів адміністратор">✓ @DietFlow.Web.Services.AppTime.ToLocal(Model.UpdatedAt).ToString("dd.MM")</span>
 }
 else if (Model.Source == PriceSource.Stat)
 {

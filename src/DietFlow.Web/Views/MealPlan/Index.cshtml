@@ -1,0 +1,78 @@
+@model WeeklyPlanVm
+@{
+    ViewData["Title"] = "Тижневий план харчування";
+    var culture = new System.Globalization.CultureInfo("uk-UA");
+    string Slot(MealType t) => t switch { MealType.Breakfast => "Сніданок", MealType.Lunch => "Обід", MealType.Dinner => "Вечеря", _ => "Перекус" };
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end mb-3 gap-2">
+    <div>
+        <h1 class="h3 mb-1">Тижневий план <span class="badge text-bg-warning fs-6 align-middle">Premium</span></h1>
+        <div class="text-muted">Норма @Model.DailyKcalGoal ккал/день · ціни: @(Model.CityName ?? "місто не обрано") ·
+            підібрано з @Model.RecipesConsidered рецептів</div>
+    </div>
+    <div class="text-end">
+        <div class="text-muted small">Вартість тижня</div>
+        <div class="fs-4 fw-semibold">@Model.WeekCost.ToString("0") грн</div>
+    </div>
+</div>
+
+@if (Model.RecipesConsidered == 0)
+{
+    <div class="alert alert-warning">У поточному місті немає цін на інгредієнти рецептів — оберіть інше місто.</div>
+}
+
+<div class="row g-3 mb-4">
+    @foreach (var day in Model.Days)
+    {
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between">
+                    <span class="fw-semibold">@day.Date.ToString("dddd, d MMMM", culture)</span>
+                    <span class="small text-muted">@day.Kcal.ToString("0") ккал · @day.Cost.ToString("0") грн</span>
+                </div>
+                <ul class="list-group list-group-flush">
+                    @foreach (var m in day.Meals)
+                    {
+                        <li class="list-group-item">
+                            <div class="small text-muted">@Slot(m.Type)</div>
+                            <a href="/recipes/@m.Slug">@m.Title</a>
+                            <div class="small text-muted">
+                                @(m.Portion == 1 ? "1 порція" : $"{m.Portion:0.##} порції") · @m.Kcal.ToString("0") ккал ·
+                                білки @m.Protein.ToString("0.#") г · @m.Cost.ToString("0.00") грн
+                            </div>
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+<h2 class="h5">Список покупок на тиждень</h2>
+<table class="table table-sm align-middle">
+    <thead><tr><th>Продукт</th><th class="text-end">Кількість</th><th>Де найдешевше</th><th class="text-end">Ціна, грн/кг</th><th class="text-end">Сума, грн</th></tr></thead>
+    <tbody>
+    @foreach (var s in Model.Shopping)
+    {
+        <tr>
+            <td><a asp-controller="Products" asp-action="Details" asp-route-id="@s.ProductId">@s.ProductName</a></td>
+            <td class="text-end">@(s.Grams >= 1000 ? $"{s.Grams / 1000:0.##} кг" : $"{s.Grams:0} г")</td>
+            <td>
+                @if (s.CheapestStoreId is { } storeId)
+                {
+                    <a asp-controller="Stores" asp-action="Details" asp-route-id="@storeId" class="small">@s.CheapestStore</a>
+                }
+                else
+                {
+                    <span class="small text-muted">немає ціни</span>
+                }
+            </td>
+            <td class="text-end">@s.PricePerKg?.ToString("0.00")</td>
+            <td class="text-end">@s.Cost?.ToString("0.00")</td>
+        </tr>
+    }
+    </tbody>
+</table>
+<p class="small text-muted">Порції підібрано так, щоб кожен прийом був близьким до частки денної норми (сніданок 25%, обід 40%, вечеря 35%);
+    з рецептів, що вкладаються в ±15%, обрано найдешевший, і страва не повторюється частіше ніж раз на три дні.</p>

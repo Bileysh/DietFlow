@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Api;
 using DietFlow.Web.Models.Entities;
@@ -52,6 +54,7 @@ public class RecipesApiController(AppDbContext db, RecipeCalculator calculator, 
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<RecipeDetailsDto>> Create(RecipeRequest request)
     {
         if (await MissingProducts(request) is { } error) return error;
@@ -65,6 +68,7 @@ public class RecipesApiController(AppDbContext db, RecipeCalculator calculator, 
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<RecipeDetailsDto>> Update(int id, RecipeRequest request)
     {
         var recipe = await db.Recipes.Include(r => r.Ingredients).FirstOrDefaultAsync(r => r.Id == id);
@@ -81,6 +85,7 @@ public class RecipesApiController(AppDbContext db, RecipeCalculator calculator, 
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var recipe = await db.Recipes.FindAsync(id);

@@ -5,7 +5,10 @@
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h3 mb-0">Продукти</h1>
-    <a asp-action="Create" class="btn btn-primary">+ Додати продукт</a>
+    @if (User.IsInRole(AppRoles.Admin))
+    {
+        <a asp-action="Create" class="btn btn-primary">+ Додати продукт</a>
+    }
 </div>
 
 <form method="get" class="row g-2 mb-3">
@@ -67,8 +70,11 @@
                     }
                 </td>
                 <td class="text-end text-nowrap">
-                    <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Змінити</a>
-                    <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger">Видалити</a>
+                    @if (User.IsInRole(AppRoles.Admin))
+                    {
+                        <a asp-action="Edit" asp-route-id="@p.Id" class="btn btn-sm btn-outline-secondary">Змінити</a>
+                        <a asp-action="Delete" asp-route-id="@p.Id" class="btn btn-sm btn-outline-danger">Видалити</a>
+                    }
                 </td>
             </tr>
         }

@@ -1,8 +1,18 @@
 {
   "info": {
     "name": "DietFlow API v1",
-    "description": "Автотести REST API DietFlow (QA1): CRUD, пагінація (B1), кешування (B9), коди помилок.",
+    "description": "Автотести REST API DietFlow (QA1): CRUD, пагінація (B1), кешування (B9), коди помилок, авторизація (C16). Запис і щоденник потребують персонального API-токена адміністратора: змінна apiToken.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{apiToken}}",
+        "type": "string"
+      }
+    ]
   },
   "variable": [
     {
@@ -36,6 +46,116 @@
   ],
   "item": [
     {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "No token -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Invalid token -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "df_invalid-token",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Anonymous write -> 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/v1/products",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"x\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Valid token -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/meals?limit=1"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));pm.test(\"Paged shape\", () => {",
+                  "    const j = pm.response.json();",
+                  "    pm.expect(j).to.have.all.keys(\"items\", \"total\", \"skip\", \"limit\", \"nextLink\");",
+                  "    pm.expect(j.items.length).to.be.at.most(j.limit);",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Cities",
       "item": [
         {
@@ -43,7 +163,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/cities"
+            "url": "{{baseUrl}}/api/v1/cities",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -71,7 +194,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products?limit=20&cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/products?limit=20&cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -99,7 +225,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products?skip=20&limit=20&cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/products?skip=20&limit=20&cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -133,7 +262,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products?q=%D0%BA%D1%83%D1%80"
+            "url": "{{baseUrl}}/api/v1/products?q=%D0%BA%D1%83%D1%80",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -153,7 +285,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products?limit=1000"
+            "url": "{{baseUrl}}/api/v1/products?limit=1000",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -173,7 +308,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/2147483647"
+            "url": "{{baseUrl}}/api/v1/products/2147483647",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -286,7 +424,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/{{productId}}"
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -306,7 +447,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -325,7 +469,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -383,7 +530,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/products/{{productId}}?cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -409,7 +559,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/stores?cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/stores?cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -547,7 +700,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices"
+            "url": "{{baseUrl}}/api/v1/stores/{{storeId}}/prices",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -576,7 +732,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/recipes?cityId={{cityId}}&sort=cost&limit=100"
+            "url": "{{baseUrl}}/api/v1/recipes?cityId={{cityId}}&sort=cost&limit=100",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {
@@ -682,7 +841,10 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": "{{baseUrl}}/api/v1/recipes/{{recipeId}}?cityId={{cityId}}"
+            "url": "{{baseUrl}}/api/v1/recipes/{{recipeId}}?cityId={{cityId}}",
+            "auth": {
+              "type": "noauth"
+            }
           },
           "event": [
             {

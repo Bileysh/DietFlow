@@ -1,0 +1,137 @@
+@model ProfileVm
+@{
+    ViewData["Title"] = "Профіль";
+    var u = Model.User;
+    var isPremium = u.Plan == SubscriptionPlan.Premium;
+}
+
+<h1 class="h3 mb-3">Профіль</h1>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="fs-5 fw-semibold">@u.DisplayName</div>
+                <div class="text-muted small">@u.Email</div>
+                <div class="mt-2 small">
+                    Вхід через: @(Model.Logins.Count > 0 ? string.Join(", ", Model.Logins) : "демо-вхід")
+                    @if (Model.IsAdmin)
+                    {
+                        <span class="badge text-bg-dark ms-1">адміністратор</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h2 class="h6">Денна норма калорій</h2>
+                <form asp-action="Goal" method="post" class="d-flex gap-2 align-items-center">
+                    <input type="number" name="DailyKcalGoal" value="@u.DailyKcalGoal" min="1000" max="5000" step="50"
+                           class="form-control" style="max-width:140px" aria-label="Денна норма, ккал" />
+                    <span class="text-muted">ккал</span>
+                    <button type="submit" class="btn btn-outline-primary">Зберегти</button>
+                </form>
+                <div class="form-text">Використовується в щоденнику і для тижневого плану.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">План: @(isPremium ? "Premium ⭐" : "Free")</h2>
+                <p class="small mb-2">
+                    AI-аналізів сьогодні:
+                    @if (Model.Quota.Unlimited)
+                    {
+                        <strong>@Model.Quota.Used</strong> <span class="text-muted">(без обмежень)</span>
+                    }
+                    else
+                    {
+                        <strong>@Model.Quota.Used з @Model.Quota.Limit</strong>
+                    }
+                </p>
+                <form asp-action="Plan" method="post">
+                    @if (isPremium)
+                    {
+                        <button type="submit" name="plan" value="@SubscriptionPlan.Free" class="btn btn-sm btn-outline-secondary">Повернутися на Free</button>
+                    }
+                    else
+                    {
+                        <button type="submit" name="plan" value="@SubscriptionPlan.Premium" class="btn btn-sm btn-warning">Активувати Premium (демо, без оплати)</button>
+                    }
+                    <a asp-controller="Premium" asp-action="Index" class="btn btn-sm btn-link">Порівняти плани</a>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="h6">API-токени</h2>
+                <p class="small text-muted">Для доступу до <a href="/scalar" target="_blank">REST API</a> від свого імені (Postman, Telegram-бот, MCP):
+                    заголовок <code>Authorization: Bearer &lt;токен&gt;</code>.</p>
+
+                @if (Model.NewToken is not null)
+                {
+                    <div class="alert alert-success">
+                        <div class="fw-semibold mb-1">Новий токен — скопіюйте зараз, повторно його не показати:</div>
+                        <div class="input-group">
+                            <input id="newToken" type="text" class="form-control font-monospace" value="@Model.NewToken" readonly />
+                            <button class="btn btn-outline-success" type="button" id="copyToken">Копіювати</button>
+                        </div>
+                    </div>
+                }
+
+                <form asp-action="CreateToken" method="post" class="d-flex gap-2 mb-3">
+                    <input type="text" name="name" maxlength="100" placeholder="Назва, напр. Postman" class="form-control" aria-label="Назва токена" />
+                    <button type="submit" class="btn btn-primary text-nowrap">Створити токен</button>
+                </form>
+
+                @if (Model.Tokens.Count == 0)
+                {
+                    <p class="text-muted small mb-0">Токенів ще немає.</p>
+                }
+                else
+                {
+                    <table class="table table-sm align-middle small mb-0">
+                        <thead><tr><th>Назва</th><th>Токен</th><th>Створено</th><th>Використано</th><th></th></tr></thead>
+                        <tbody>
+                        @foreach (var t in Model.Tokens)
+                        {
+                            <tr class="@(t.RevokedAt is null ? "" : "text-muted")">
+                                <td>@t.Name</td>
+                                <td class="font-monospace">@t.Prefix…</td>
+                                <td>@DietFlow.Web.Services.AppTime.ToLocal(t.CreatedAt).ToString("dd.MM.yyyy")</td>
+                                <td>@(t.LastUsedAt is { } used ? DietFlow.Web.Services.AppTime.ToLocal(used).ToString("dd.MM HH:mm") : "—")</td>
+                                <td class="text-end">
+                                    @if (t.RevokedAt is null)
+                                    {
+                                        <form asp-action="RevokeToken" asp-route-id="@t.Id" method="post">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Відкликати</button>
+                                        </form>
+                                    }
+                                    else
+                                    {
+                                        <span>відкликано</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.getElementById('copyToken')?.addEventListener('click', async e => {
+            const input = document.getElementById('newToken');
+            try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand('copy'); }
+            e.target.textContent = 'Скопійовано ✓';
+        });
+    </script>
+}

@@ -1,3 +1,5 @@
+using DietFlow.Web.Services.Auth;
+using Microsoft.AspNetCore.Authorization;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Api;
 using DietFlow.Web.Models.Entities;
@@ -66,6 +68,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
 
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<StoreDto>> Create(StoreRequest request)
     {
         if (!await db.Cities.AnyAsync(c => c.Id == request.CityId))
@@ -80,6 +83,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
     }
 
     [HttpPut("{id:int}")]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<StoreDto>> Update(int id, StoreRequest request)
     {
         var store = await db.Stores.FindAsync(id);
@@ -95,6 +99,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
 
     [HttpDelete("{id:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> Delete(int id)
     {
         var store = await db.Stores.FindAsync(id);
@@ -124,6 +129,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
     [HttpPut("{storeId:int}/prices/{productId:int}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status201Created)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<ActionResult<StorePriceDto>> SetPrice(int storeId, int productId, PriceRequest request)
     {
         if (!await db.Stores.AnyAsync(st => st.Id == storeId)) return NotFound();
@@ -139,7 +145,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
         }
         price!.PricePerKg = request.PricePerKg;
         price.UpdatedAt = DateTime.UtcNow;
-        price.Source = PriceSource.User;
+        price.Source = PriceSource.Manual;
         await db.SaveChangesAsync();
         await cache.PriceChangedAsync();
 
@@ -149,6 +155,7 @@ public class StoresApiController(AppDbContext db, CacheInvalidator cache) : ApiC
 
     [HttpDelete("{storeId:int}/prices/{productId:int}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [Authorize(Roles = AppRoles.Admin)]
     public async Task<IActionResult> DeletePrice(int storeId, int productId)
     {
         var price = await db.StorePrices.FindAsync(storeId, productId);
