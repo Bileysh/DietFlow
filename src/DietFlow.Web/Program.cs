@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Services.Auth;
+using DietFlow.Web.Services.Agent;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,10 @@ builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddScoped<ApiTokenService>();
 builder.Services.AddScoped<AnalysisQuotaService>();
 builder.Services.AddScoped<WeeklyPlanService>();
+
+builder.Services.AddHttpClient<IAgentModel, GeminiAgentModel>(c => c.Timeout = TimeSpan.FromSeconds(120));
+builder.Services.AddScoped<AgentTools>();
+builder.Services.AddScoped<AgentService>();
 
 builder.Services.AddIdentityCore<AppUser>(o => o.User.RequireUniqueEmail = true)
     .AddRoles<IdentityRole>()

@@ -34,13 +34,16 @@ namespace DietFlow.Web.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
                     b.Property<string>("UserId")
                         .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "CreatedAt");
+                    b.HasIndex("UserId", "Kind", "CreatedAt");
 
                     b.ToTable("AiAnalysisLogs");
                 });

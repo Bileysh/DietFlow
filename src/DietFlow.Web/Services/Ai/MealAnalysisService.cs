@@ -21,18 +21,33 @@ public class MealAnalysisService(
 
         var image = await files.ReadAsync(meal.PhotoPath, ct)
                     ?? throw new MealAnalysisException("Спершу додайте фото страви.", canRetry: false);
+
+        var analysis = await AnalyzeImageAsync(image, userId, cityId, ct);
+        await ApplyAsync(meal, analysis, ct);
+        await db.SaveChangesAsync(ct);
+    }
+    
+    public async Task<MealAnalysis> AnalyzeImageAsync(byte[] image, string userId, int cityId, CancellationToken ct = default)
+    {
         var mediaType = ImageValidator.DetectMediaType(image)
                         ?? throw new MealAnalysisException("Фото має бути у форматі JPEG, PNG або WebP.", canRetry: false);
 
-        var limits = await quota.GetAsync(userId, ct);
+        var limits = await quota.GetAsync(userId, AiUsageKind.PhotoAnalysis, ct);
         if (limits.Exhausted) throw new AnalysisLimitException(limits.Limit);
 
         var catalog = await BuildCatalogAsync(cityId, ct);
         var analysis = await analyzer.AnalyzeAsync(image, mediaType, catalog, ct);
 
-        Apply(meal, analysis, catalog.Select(c => c.Id).ToHashSet());
-        db.AiAnalysisLogs.Add(new AiAnalysisLog { UserId = userId });
+        db.AiAnalysisLogs.Add(new AiAnalysisLog { UserId = userId, Kind = AiUsageKind.PhotoAnalysis });
         await db.SaveChangesAsync(ct);
+        return analysis;
+    }
+
+    public async Task ApplyAsync(Meal meal, MealAnalysis analysis, CancellationToken ct = default)
+    {
+        var ids = analysis.RecommendedRecipes.Select(r => r.RecipeId).ToList();
+        var valid = (await db.Recipes.Where(r => ids.Contains(r.Id)).Select(r => r.Id).ToListAsync(ct)).ToHashSet();
+        Apply(meal, analysis, valid);
     }
 
     private async Task<List<CatalogRecipe>> BuildCatalogAsync(int cityId, CancellationToken ct)

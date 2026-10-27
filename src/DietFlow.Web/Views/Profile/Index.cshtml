@@ -39,17 +39,20 @@
         <div class="card">
             <div class="card-body">
                 <h2 class="h6">План: @(isPremium ? "Premium ⭐" : "Free")</h2>
-                <p class="small mb-2">
-                    AI-аналізів сьогодні:
-                    @if (Model.Quota.Unlimited)
-                    {
-                        <strong>@Model.Quota.Used</strong> <span class="text-muted">(без обмежень)</span>
-                    }
-                    else
-                    {
-                        <strong>@Model.Quota.Used з @Model.Quota.Limit</strong>
-                    }
-                </p>
+                @foreach (var (label, q) in new[] { ("AI-аналізів фото", Model.Quota), ("Повідомлень помічнику", Model.AgentQuota) })
+                {
+                    <p class="small mb-1">
+                        @label сьогодні:
+                        @if (q.Unlimited)
+                        {
+                            <strong>@q.Used</strong> <span class="text-muted">(без обмежень)</span>
+                        }
+                        else
+                        {
+                            <strong>@q.Used з @q.Limit</strong>
+                        }
+                    </p>
+                }
                 <form asp-action="Plan" method="post">
                     @if (isPremium)
                     {

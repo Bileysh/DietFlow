@@ -7,6 +7,7 @@
 Проєкт з дисципліни «Web-технології».
 
 ## Можливості
+- **AI-помічник (агент)** — чат на Gemini з викликом інструментів: підбирає рецепти під калорії й бюджет, читає щоденник, шукає найдешевші магазини, аналізує фото і за проханням додає прийоми їжі; відповідь стрімиться через SSE, кроки агента видно в реальному часі.
 - **AI-аналіз фото страви** — назва, інгредієнти, ккал, БЖВ, оцінка корисності 1–10, проблеми й поради, кращі альтернативи з каталогу рецептів.
   Провайдер обирається в конфігурації: **Google Gemini** (безкоштовний free tier, за замовчуванням) або **Claude**.
 - **Камера та стиснення фото в браузері** — зйомка прямо на сайті, drag & drop, зменшення до 1280 px і видалення EXIF/GPS до відправки.
@@ -18,7 +19,7 @@
 - **Ціни на основі відкритих даних Держстату** — середні споживчі ціни по областях (офіційний SDMX API, CC BY 4.0) для 20 базових продуктів; ціни в магазинах — оцінка «ціна області × коефіцієнт мережі».
 - **Ціни з позначкою джерела** — «📊 Держстат» (оцінка), «демо» (згенеровані) або «✓ перевірено» (введені адміністратором вручну, мають пріоритет і не перезаписуються).
 - **Вхід через Google** (OAuth2, ASP.NET Identity): кожен бачить лише свій щоденник; каталог (продукти, магазини, рецепти, ціни) змінює лише адміністратор.
-- **Плани Free / Premium** через feature flags: Free — 5 AI-аналізів на день, Premium — без ліміту і **тижневий план харчування** (7 днів × 3 прийоми під норму калорій, найдешевші рецепти, список покупок).
+- **Плани Free / Premium** через feature flags: Free — 5 AI-аналізів фото і 20 повідомлень помічнику на день, Premium — без лімітів і **тижневий план харчування** (7 днів × 3 прийоми під норму калорій, найдешевші рецепти, список покупок).
 - **REST API v1** з пагінацією, кешуванням, персональними API-токенами та автотестами Postman і xUnit.
 
 ## Стек
@@ -96,7 +97,8 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 | `Gemini:FallbackModel` | запасна модель, якщо основна перевантажена | `gemini-flash-lite-latest` |
 | `Authentication:Google:ClientId`, `…:ClientSecret` | вхід через Google | — (user-secrets) |
 | `Admin:Emails` | email-и адміністраторів (роль Admin) | — (user-secrets) |
-| `Plans:FreeDailyAnalyses` | ліміт AI-аналізів на день для Free | `5` |
+| `Plans:FreeDailyAnalyses` | ліміт AI-аналізів фото на день для Free | `5` |
+| `Plans:FreeDailyAgentMessages` | ліміт повідомлень AI-помічнику на день для Free | `20` |
 | `FeatureManagement` | feature flags `UnlimitedAiAnalysis`, `WeeklyMealPlan` (увімкнені для групи Premium) | див. appsettings.json |
 | `Site:ContactEmail`, `Site:ContactPhone`, `Site:TelegramUrl` | контакти на landing-сторінках | демо-значення |
 
@@ -112,6 +114,7 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 | `/Products`, `/Stores` | довідники продуктів, магазинів і цін; перемикач міста в шапці |
 | `/Map` | мапа магазинів: місто або «поруч зі мною», фільтри (`/Map?productId=` — одразу з цінами продукту) |
 | `/Account/Login` | вхід через Google (у Development — ще й демо-вхід) |
+| `/Assistant` | AI-помічник: чат з агентом (кроки інструментів, фото, магазини поруч) |
 | `/Profile` | денна норма, план Free/Premium, персональні API-токени |
 | `/Premium` | порівняння планів |
 | `/MealPlan` | тижневий план харчування (Premium) |
@@ -127,6 +130,7 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 | Продукти | `GET/POST /api/v1/products`, `GET/PUT/DELETE /api/v1/products/{id}`, `GET /api/v1/products/search?term=` (autocomplete) |
 | Магазини, ціни | `GET /api/v1/stores/nearby?lat=&lng=&radiusKm=`, `GET/POST /api/v1/stores`, `GET/PUT/DELETE /api/v1/stores/{id}`, `GET /api/v1/stores/{id}/prices`, `PUT/DELETE /api/v1/stores/{id}/prices/{productId}` |
 | Рецепти | `GET/POST /api/v1/recipes`, `GET/PUT/DELETE /api/v1/recipes/{id}` (калорії й вартість розраховуються, `?cityId=`) |
+| AI-агент | `POST /api/v1/agent/chat` — відповідь потоком Server-Sent Events: `step`, `result`, `delta`, `done`, `error` |
 | Щоденник | `GET/POST /api/v1/meals`, `GET/PUT/DELETE /api/v1/meals/{id}`, `POST /api/v1/meals/{id}/photo`, `POST /api/v1/meals/{id}/analyze` |
 
 - **Авторизація:** читання каталогу — відкрите; щоденник і зміни — з персональним токеном із `/Profile`:
@@ -141,9 +145,10 @@ curl "http://localhost:5213/api/v1/recipes?cityId=1&sort=cost&limit=5"
 ```
 
 ## Тести
-**xUnit + WebApplicationFactory** (`tests/DietFlow.Tests`) — 24 тести автентифікації й авторизації: редирект на вхід,
-401/403/404, дійсний/недійсний/відкликаний токен, ліміт Free і безліміт Premium, доступ до тижневого плану.
-Застосунок запускається в пам'яті проти окремої бази `dietflow_test` (створюється з нуля), AI і сховище фото підмінені:
+**xUnit + WebApplicationFactory** (`tests/DietFlow.Tests`) — 35 тестів: автентифікація й авторизація (редирект на вхід,
+401/403/404, дійсний/недійсний/відкликаний токен, ліміт Free і безліміт Premium, тижневий план) і AI-агент
+(SSE-події, цикл інструментів, лише власний щоденник, запис через add_meal, помилки інструментів, ліміт кроків, ліміти планів).
+Застосунок запускається в пам'яті проти окремої бази `dietflow_test` (створюється з нуля); AI, модель агента і сховище фото підмінені:
 ```bash
 dotnet test
 ```
@@ -161,7 +166,7 @@ npx newman run tests/postman/DietFlow.postman_collection.json -e tests/postman/l
 |---|---|
 | AppUser | користувач (ASP.NET Identity), денна норма ккал, план Free/Premium; вхід через Google, роль Admin |
 | ApiToken | персональний токен REST API: назва, SHA-256 хеш, час створення/використання/відкликання |
-| AiAnalysisLog | журнал AI-аналізів — для денного ліміту плану Free |
+| AiAnalysisLog | журнал використання AI (аналіз фото / повідомлення агенту) — для денних лімітів плану Free |
 | Meal | прийом їжі: **фото (файл)**, результат AI-аналізу (`jsonb`) |
 | MealRecommendation | Meal ↔ Recipe: що AI порадив замість страви і чому |
 | Recipe | рецепт: slug, кроки (Markdown), спосіб приготування, час, порції, фото |
@@ -180,7 +185,7 @@ src/DietFlow.Web/
   Controllers/Api/    REST API v1
   Data/               DbContext, сидер, імпорт Open Food Facts
   Models/             сутності, ViewModels, DTO API
-  Services/           розрахунки, правила, кеш, файли, AI (Services/Ai), вхід і токени (Services/Auth), тижневий план
+  Services/           розрахунки, правила, кеш, файли, AI (Services/Ai), вхід і токени (Services/Auth), AI-агент та його інструменти (Services/Agent), тижневий план
   Views/              Razor-сторінки
   wwwroot/            JS (камера, autocomplete, графіки), CSS, фото рецептів
 tests/DietFlow.Tests/ xUnit-тести автентифікації й авторизації (WebApplicationFactory)
@@ -205,6 +210,7 @@ tests/postman/        колекція й оточення Postman
 | C16 | Вхід через Google (OAuth2, ASP.NET Identity), роль Admin, персональні API-токени | ✅ |
 | B6 | Free / Premium через feature flags (Microsoft.FeatureManagement): ліміт AI, тижневий план | ✅ |
 | QA3 | Тести автентифікації й авторизації (xUnit + WebApplicationFactory) | ✅ |
-| C21, C22, B2, C12, F3, QA2, C3, C2, C9 | — | ⏳ заплановано |
+| C21 | AI-агент: Gemini з function calling, 6 інструментів (4 читання, 2 запис), SSE-стрімінг кроків і відповіді | ✅ |
+| C22, B2, C12, F3, QA2, C3, C2, C9 | — | ⏳ заплановано |
 
 Джерела фото й даних — у [CREDITS.md](CREDITS.md).

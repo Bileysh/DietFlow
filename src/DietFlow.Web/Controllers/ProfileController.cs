@@ -22,6 +22,7 @@ public class ProfileController(
             User = user,
             IsAdmin = User.IsInRole(AppRoles.Admin),
             Quota = await quota.GetAsync(user.Id),
+            AgentQuota = await quota.GetAsync(user.Id, AiUsageKind.AgentMessage),
             Tokens = await tokens.ListAsync(user.Id),
             NewToken = TempData["NewToken"] as string,
             Logins = (await users.GetLoginsAsync(user)).Select(l => l.ProviderDisplayName ?? l.LoginProvider).ToList(),

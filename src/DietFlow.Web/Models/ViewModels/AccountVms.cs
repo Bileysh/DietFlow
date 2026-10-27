@@ -17,6 +17,7 @@ public class ProfileVm
     public AppUser User { get; init; } = null!;
     public bool IsAdmin { get; init; }
     public AnalysisQuota Quota { get; init; } = null!;
+    public AnalysisQuota AgentQuota { get; init; } = null!;
     public IReadOnlyList<ApiToken> Tokens { get; init; } = [];
     public string? NewToken { get; init; }
     public IReadOnlyList<string> Logins { get; init; } = [];

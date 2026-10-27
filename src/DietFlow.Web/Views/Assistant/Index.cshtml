@@ -1,0 +1,70 @@
+@using DietFlow.Web.Services
+@{
+    ViewData["Title"] = "AI-помічник";
+    var quota = (AnalysisQuota)ViewBag.Quota;
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+        <h1 class="h3 mb-1">AI-помічник 🤖</h1>
+        <div class="text-muted small">Підбирає рецепти під калорії й бюджет, рахує БЖВ за фото, шукає найдешевші магазини
+            і веде ваш щоденник. Ціни — для міста @(ViewBag.CityName ?? "не обрано").</div>
+    </div>
+    <div class="small text-muted" id="agentQuota">
+        @if (quota.Unlimited)
+        {
+            <span>Повідомлень сьогодні: @quota.Used (Premium, без обмежень)</span>
+        }
+        else
+        {
+            <span>Повідомлень сьогодні: <span id="quotaUsed">@quota.Used</span> з @quota.Limit</span>
+        }
+    </div>
+</div>
+
+@if (ViewBag.Available != true)
+{
+    <div class="alert alert-warning">AI-помічник не налаштований: потрібен ключ Gemini API (<code>Gemini:ApiKey</code>).</div>
+}
+
+<div class="card">
+    <div class="card-body chat-log" id="chatLog" aria-live="polite">
+        <div class="chat-empty text-muted text-center py-4" id="chatEmpty">
+            <div class="mb-2">Спробуйте:</div>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary chat-suggestion">Скільки я сьогодні з'їв і скільки лишилось до норми?</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary chat-suggestion">Запропонуй вечерю до 500 ккал і 80 грн</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary chat-suggestion">Рецепт з найбільшою кількістю білка</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary chat-suggestion">Де найдешевше купити гречку?</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-footer bg-white">
+        <form id="chatForm" class="d-flex flex-column gap-2">
+            <div id="chatPhoto" class="d-none">
+                <input type="file" id="chatPhotoInput" accept="image/jpeg,image/png,image/webp" data-photo-picker />
+            </div>
+            <div class="d-flex gap-2 align-items-end">
+                <textarea id="chatInput" class="form-control" rows="2" maxlength="2000"
+                          placeholder="Напишіть повідомлення… (Enter — надіслати, Shift+Enter — новий рядок)" aria-label="Повідомлення"></textarea>
+                <div class="d-flex flex-column gap-1">
+                    <button type="submit" class="btn btn-primary" id="chatSend" @(ViewBag.Available == true ? "" : "disabled")>Надіслати</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chatPhotoToggle" title="Прикріпити фото страви">📷 Фото</button>
+                </div>
+            </div>
+            <div class="d-flex flex-wrap justify-content-between small">
+                <label class="form-check-label"><input type="checkbox" class="form-check-input me-1" id="chatUseLocation" />
+                    Шукати магазини поруч зі мною</label>
+                <button type="button" class="btn btn-link btn-sm p-0 text-muted" id="chatClear">Очистити розмову</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<p class="small text-muted mt-2">Помічник працює на Gemini з викликом інструментів (рецепти, щоденник, ціни).
+    Записувати в щоденник він може лише на ваше прохання. Історія розмови зберігається тільки у вашому браузері.</p>
+
+@section Scripts {
+    <script src="~/js/photo-picker.js" asp-append-version="true"></script>
+    <script src="~/js/assistant.js" asp-append-version="true"></script>
+}
