@@ -23,4 +23,8 @@
     <ProjectReference Include="..\..\src\DietFlow.Web\DietFlow.Web.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\src\DietFlow.Functions\NutritionCalculator.cs" Link="Functions\NutritionCalculator.cs" />
+  </ItemGroup>
+
 </Project>

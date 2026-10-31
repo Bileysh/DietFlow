@@ -8,6 +8,8 @@
 
 ## Можливості
 - **AI-помічник (агент)** — чат на Gemini з викликом інструментів: підбирає рецепти під калорії й бюджет, читає щоденник, шукає найдешевші магазини, аналізує фото і за проханням додає прийоми їжі; відповідь стрімиться через SSE, кроки агента видно в реальному часі.
+- **MCP-сервер** (`/mcp`, офіційний C# SDK) — щоденник, рецепти й ціни доступні Claude Desktop та іншим MCP-агентам за персональним токеном.
+- **Telegram-бот** — фото страви → калорії й запис у щоденник, `/today`, відповіді AI-помічника; прив'язка акаунта одноразовим посиланням з профілю.
 - **AI-аналіз фото страви** — назва, інгредієнти, ккал, БЖВ, оцінка корисності 1–10, проблеми й поради, кращі альтернативи з каталогу рецептів.
   Провайдер обирається в конфігурації: **Google Gemini** (безкоштовний free tier, за замовчуванням) або **Claude**.
 - **Камера та стиснення фото в браузері** — зйомка прямо на сайті, drag & drop, зменшення до 1280 px і видалення EXIF/GPS до відправки.
@@ -100,6 +102,8 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 | `Plans:FreeDailyAnalyses` | ліміт AI-аналізів фото на день для Free | `5` |
 | `Plans:FreeDailyAgentMessages` | ліміт повідомлень AI-помічнику на день для Free | `20` |
 | `FeatureManagement` | feature flags `UnlimitedAiAnalysis`, `WeeklyMealPlan` (увімкнені для групи Premium) | див. appsettings.json |
+| `Telegram:BotToken`, `Telegram:BotUsername` | Telegram-бот (без токена бот вимкнений) | — (user-secrets) |
+| `Site:BaseUrl` | публічна адреса сайту для посилань у Telegram | `http://localhost:5213` |
 | `Site:ContactEmail`, `Site:ContactPhone`, `Site:TelegramUrl` | контакти на landing-сторінках | демо-значення |
 
 Без ключа AI застосунок працює повністю, лише кнопка AI-аналізу неактивна (поля можна заповнити вручну).
@@ -144,10 +148,56 @@ dotnet run --project src/DietFlow.Web -- import-off --limit 50000   # части
 curl "http://localhost:5213/api/v1/recipes?cityId=1&sort=cost&limit=5"
 ```
 
+## MCP-сервер (Claude Desktop)
+`/mcp` — MCP-сервер (Streamable HTTP, офіційний SDK `ModelContextProtocol.AspNetCore`) з тими самими інструментами, що в AI-помічника:
+`search_recipes`, `get_recipe`, `get_diary`, `find_cheapest_stores` (читання) і `add_meal` (запис).
+Авторизація — персональний API-токен із `/Profile`; агент бачить і змінює лише щоденник власника токена.
+
+Claude Desktop → Settings → Developer → Edit Config (`claude_desktop_config.json`), міст `mcp-remote` потребує Node.js:
+```json
+{
+  "mcpServers": {
+    "dietflow": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "http://localhost:5213/mcp", "--header", "Authorization:${DIETFLOW_AUTH}"],
+      "env": { "DIETFLOW_AUTH": "Bearer df_ваш_токен" }
+    }
+  }
+}
+```
+Перевірити сервер без Claude: `npx @modelcontextprotocol/inspector` → Streamable HTTP, `http://localhost:5213/mcp`, заголовок `Authorization: Bearer df_...`.
+
+## Telegram-бот
+1. Створіть бота в [@BotFather](https://t.me/BotFather) і збережіть токен та username у user-secrets (`Telegram:BotToken`, `Telegram:BotUsername`).
+2. Запустіть сайт — бот працює через long polling (публічна адреса не потрібна).
+3. `/Profile` → «Підключити Telegram» → у боті натисніть «Start» (одноразовий код діє 15 хв).
+
+Бот: фото страви → аналіз і кнопки «додати на сніданок/обід/вечерю/перекус»; `/today` — щоденник за сьогодні;
+будь-який текст — відповідь AI-помічника; `/unlink` — відв'язати чат. Без прив'язки бот не показує жодних даних.
+
+## Хмара (Azure) і CI/CD
+| Що | Сервіс |
+|---|---|
+| Сайт (Docker-образ) | Azure Container Apps |
+| База | Azure Database for PostgreSQL Flexible Server (B1ms) |
+| Фото страв | Azure Blob Storage — браузер завантажує їх напряму з Blob, кеш на рік |
+| Аналітика | Application Insights: запити, помилки і кастомні події (`MealPhotoAnalyzed`, `AgentMessage`, `UserSignedIn`, `PlanChanged`, `ApiTokenCreated`, `TelegramLinked`, `McpToolCalled`) |
+| Serverless API | Azure Functions (Flex Consumption): `POST /api/norms` — денна норма калорій і БЖВ (Mifflin-St Jeor), використовується в профілі |
+| CI/CD | GitHub Actions (`.github/workflows/ci-cd.yml`): тести на PostgreSQL → образ у GHCR → деплой у Container Apps і Functions після кожного push у `main` |
+
+Інфраструктура створюється скриптом (Git Bash, після `az login`):
+```bash
+LOCATION=polandcentral bash deploy/azure-setup.sh
+```
+Скрипт бере ключі з user-secrets і передає їх в Azure як secrets, налаштовує доступ GitHub Actions через OIDC (без паролів)
+і виводить змінні для GitHub (Settings → Secrets and variables → Actions → Variables) та redirect URI для Google OAuth.
+У хмарі `Database:MigrateOnStartup=true` застосовує міграції й довідникові дані при старті.
+
 ## Тести
-**xUnit + WebApplicationFactory** (`tests/DietFlow.Tests`) — 35 тестів: автентифікація й авторизація (редирект на вхід,
+**xUnit + WebApplicationFactory** (`tests/DietFlow.Tests`) — 53 тести: автентифікація й авторизація (редирект на вхід,
 401/403/404, дійсний/недійсний/відкликаний токен, ліміт Free і безліміт Premium, тижневий план) і AI-агент
-(SSE-події, цикл інструментів, лише власний щоденник, запис через add_meal, помилки інструментів, ліміт кроків, ліміти планів).
+(SSE-події, цикл інструментів, лише власний щоденник, запис через add_meal, помилки інструментів, ліміт кроків, ліміти планів), MCP-сервер (справжній MCP-клієнт: список інструментів, лише свої дані, запис)
+і Telegram-бот (прив'язка за кодом, прострочений/повторний код, /today, фото → щоденник, відповіді агента) і розрахунок денної норми (Azure Function).
 Застосунок запускається в пам'яті проти окремої бази `dietflow_test` (створюється з нуля); AI, модель агента і сховище фото підмінені:
 ```bash
 dotnet test
@@ -211,6 +261,12 @@ tests/postman/        колекція й оточення Postman
 | B6 | Free / Premium через feature flags (Microsoft.FeatureManagement): ліміт AI, тижневий план | ✅ |
 | QA3 | Тести автентифікації й авторизації (xUnit + WebApplicationFactory) | ✅ |
 | C21 | AI-агент: Gemini з function calling, 6 інструментів (4 читання, 2 запис), SSE-стрімінг кроків і відповіді | ✅ |
-| C22, B2, C12, F3, QA2, C3, C2, C9 | — | ⏳ заплановано |
+| C22 | MCP-сервер (офіційний SDK): 4 інструменти на читання + 1 на запис, робота з Claude Desktop | ✅ |
+| B2 | Telegram-бот: фото → щоденник, /today, AI-помічник, прив'язка акаунта | ✅ |
+| C19 | Фото в Azure Blob Storage (напряму з Blob, кешування) | ✅ (перевірено на Azurite) |
+| C9 | Application Insights: кастомні події продукту | ✅ |
+| B7 | Serverless API на Azure Functions: розрахунок денної норми | ✅ |
+| C3 | CI/CD у GitHub Actions: тести → Docker-образ → деплой в Azure | ✅ |
+| C2 | Розгортання в Azure (Container Apps + PostgreSQL) | ⏳ після запуску deploy/azure-setup.sh |
 
 Джерела фото й даних — у [CREDITS.md](CREDITS.md).
