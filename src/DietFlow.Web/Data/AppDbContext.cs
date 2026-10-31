@@ -48,6 +48,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : IdentityDbCo
         b.Entity<City>().HasIndex(c => c.Name).IsUnique();
 
         b.Entity<StorePrice>().HasKey(sp => new { sp.StoreId, sp.ProductId });
+        b.Entity<AppUser>().HasIndex(u => u.TelegramChatId).IsUnique().HasFilter("\"TelegramChatId\" IS NOT NULL");
+        b.Entity<AppUser>().HasIndex(u => u.TelegramLinkCode).IsUnique().HasFilter("\"TelegramLinkCode\" IS NOT NULL");
         b.Entity<ApiToken>().HasIndex(t => t.TokenHash).IsUnique();
         b.Entity<ApiToken>().HasOne(t => t.User).WithMany().HasForeignKey(t => t.UserId).OnDelete(DeleteBehavior.Cascade);
         b.Entity<AiAnalysisLog>().HasIndex(l => new { l.UserId, l.Kind, l.CreatedAt });

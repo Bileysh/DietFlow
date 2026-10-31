@@ -148,6 +148,16 @@ namespace DietFlow.Web.Migrations
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
 
+                    b.Property<long?>("TelegramChatId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("TelegramLinkCode")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("TelegramLinkExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
 
@@ -163,6 +173,14 @@ namespace DietFlow.Web.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("TelegramChatId")
+                        .IsUnique()
+                        .HasFilter("\"TelegramChatId\" IS NOT NULL");
+
+                    b.HasIndex("TelegramLinkCode")
+                        .IsUnique()
+                        .HasFilter("\"TelegramLinkCode\" IS NOT NULL");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });

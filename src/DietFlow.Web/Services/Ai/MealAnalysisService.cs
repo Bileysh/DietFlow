@@ -8,7 +8,7 @@ namespace DietFlow.Web.Services.Ai;
 
 
 public class MealAnalysisService(
-    AppDbContext db, IMealAnalyzer analyzer, RecipeCalculator calculator, IFileStorage files, AnalysisQuotaService quota)
+    AppDbContext db, IMealAnalyzer analyzer, RecipeCalculator calculator, IFileStorage files, AnalysisQuotaService quota, AppEvents events)
 {
     public bool IsAvailable => analyzer.IsConfigured;
     public string ProviderName => analyzer.ProviderName;
@@ -40,6 +40,8 @@ public class MealAnalysisService(
 
         db.AiAnalysisLogs.Add(new AiAnalysisLog { UserId = userId, Kind = AiUsageKind.PhotoAnalysis });
         await db.SaveChangesAsync(ct);
+        events.Track(AppEvents.MealPhotoAnalyzed, ("provider", analyzer.ProviderName), ("isFood", analysis.IsFood),
+            ("kcal", analysis.Kcal), ("healthScore", analysis.HealthScore), ("plan", limits.Unlimited ? "Premium" : "Free"));
         return analysis;
     }
 

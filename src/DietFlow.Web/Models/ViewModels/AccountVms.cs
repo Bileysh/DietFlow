@@ -21,6 +21,7 @@ public class ProfileVm
     public IReadOnlyList<ApiToken> Tokens { get; init; } = [];
     public string? NewToken { get; init; }
     public IReadOnlyList<string> Logins { get; init; } = [];
+    public string? TelegramBotUsername { get; init; }
 }
 
 public class GoalFormVm

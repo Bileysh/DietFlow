@@ -13,5 +13,10 @@ public class AppUser : IdentityUser
     public string? DisplayName { get; set; }
     public int DailyKcalGoal { get; set; } = 2000;
     public SubscriptionPlan Plan { get; set; } = SubscriptionPlan.Free;
+
+    public long? TelegramChatId { get; set; }
+    [System.ComponentModel.DataAnnotations.MaxLength(16)]
+    public string? TelegramLinkCode { get; set; }
+    public DateTime? TelegramLinkExpiresAt { get; set; }
     public ICollection<Meal> Meals { get; set; } = new List<Meal>();
 }

@@ -12,7 +12,7 @@
 
     var baseUrl = $"{Context.Request.Scheme}://{Context.Request.Host}";
     var canonical = $"{baseUrl}/recipes/{r.Slug}";
-    var imageUrl = r.PhotoPath is null ? null : baseUrl + r.PhotoPath;
+    var imageUrl = r.PhotoPath is null ? null : r.PhotoPath.StartsWith("http") ? r.PhotoPath : baseUrl + r.PhotoPath;
     var description = r.Description ?? $"{r.Title}: рецепт з калорійністю, БЖВ і вартістю інгредієнтів.";
     if (s is not null) description += $" {s.Kcal:0} ккал на порцію, {r.CookTimeMinutes} хв.";
 

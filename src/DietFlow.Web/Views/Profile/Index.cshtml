@@ -1,4 +1,5 @@
 @model ProfileVm
+@inject Microsoft.Extensions.Options.IOptions<DietFlow.Web.Services.SiteOptions> Site
 @{
     ViewData["Title"] = "Профіль";
     var u = Model.User;
@@ -27,12 +28,34 @@
             <div class="card-body">
                 <h2 class="h6">Денна норма калорій</h2>
                 <form asp-action="Goal" method="post" class="d-flex gap-2 align-items-center">
-                    <input type="number" name="DailyKcalGoal" value="@u.DailyKcalGoal" min="1000" max="5000" step="50"
+                    <input type="number" id="dailyGoal" name="DailyKcalGoal" value="@u.DailyKcalGoal" min="1000" max="5000" step="50"
                            class="form-control" style="max-width:140px" aria-label="Денна норма, ккал" />
                     <span class="text-muted">ккал</span>
                     <button type="submit" class="btn btn-outline-primary">Зберегти</button>
                 </form>
                 <div class="form-text">Використовується в щоденнику і для тижневого плану.</div>
+                @if (!string.IsNullOrWhiteSpace(Site.Value.NormsApiUrl))
+                {
+                    <details class="mt-3">
+                        <summary class="small">Розрахувати норму (Mifflin-St Jeor)</summary>
+                        <form id="normsForm" data-url="@Site.Value.NormsApiUrl" class="row g-2 mt-1 small">
+                            <div class="col-6"><select name="sex" class="form-select form-select-sm" aria-label="Стать">
+                                <option value="male">Чоловік</option><option value="female">Жінка</option></select></div>
+                            <div class="col-6"><input name="age" type="number" min="14" max="100" required placeholder="Вік" class="form-control form-control-sm" /></div>
+                            <div class="col-6"><input name="weightKg" type="number" min="30" max="300" step="0.1" required placeholder="Вага, кг" class="form-control form-control-sm" /></div>
+                            <div class="col-6"><input name="heightCm" type="number" min="120" max="250" required placeholder="Зріст, см" class="form-control form-control-sm" /></div>
+                            <div class="col-6"><select name="activity" class="form-select form-select-sm" aria-label="Активність">
+                                <option value="sedentary">Сидячий спосіб життя</option><option value="light">Легка активність</option>
+                                <option value="moderate" selected>Помірна (3–5 тренувань)</option><option value="active">Висока</option>
+                                <option value="veryActive">Дуже висока</option></select></div>
+                            <div class="col-6"><select name="goal" class="form-select form-select-sm" aria-label="Мета">
+                                <option value="lose">Схуднути</option><option value="maintain" selected>Підтримувати вагу</option>
+                                <option value="gain">Набрати масу</option></select></div>
+                            <div class="col-12"><button type="submit" class="btn btn-sm btn-outline-secondary">Розрахувати</button></div>
+                            <div class="col-12 text-muted" id="normsResult" aria-live="polite"></div>
+                        </form>
+                    </details>
+                }
             </div>
         </div>
 
@@ -69,6 +92,31 @@
     </div>
 
     <div class="col-lg-7">
+        @if (Model.TelegramBotUsername is not null)
+        {
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h2 class="h6">Telegram-бот</h2>
+                    @if (u.TelegramChatId is not null)
+                    {
+                        <p class="small mb-2">✅ Підключено. Надсилайте боту <a href="https://t.me/@Model.TelegramBotUsername.TrimStart('@')" target="_blank" rel="noopener">@@@Model.TelegramBotUsername.TrimStart('@')</a>
+                            фото страв або питання; <code>/today</code> — щоденник за сьогодні.</p>
+                        <form asp-action="TelegramUnlink" method="post">
+                            <button type="submit" class="btn btn-sm btn-outline-secondary">Відв'язати</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="small text-muted mb-2">Фото страви в Telegram → калорії й запис у щоденник; питання → відповідь AI-помічника.</p>
+                        <form asp-action="TelegramLink" method="post" target="_blank">
+                            <button type="submit" class="btn btn-sm btn-primary">Підключити Telegram</button>
+                        </form>
+                        <div class="form-text">Відкриється бот — натисніть «Start». Посилання діє 15 хвилин.</div>
+                    }
+                </div>
+            </div>
+        }
+
         <div class="card">
             <div class="card-body">
                 <h2 class="h6">API-токени</h2>
@@ -130,6 +178,7 @@
 </div>
 
 @section Scripts {
+    <script src="~/js/norms.js" asp-append-version="true"></script>
     <script>
         document.getElementById('copyToken')?.addEventListener('click', async e => {
             const input = document.getElementById('newToken');

@@ -2,6 +2,7 @@ using DietFlow.Web.Data;
 using DietFlow.Web.Services;
 using DietFlow.Web.Services.Ai;
 using DietFlow.Web.Services.Agent;
+using DietFlow.Web.Services.Telegram;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -20,6 +21,7 @@ public class DietFlowFactory : WebApplicationFactory<Program>, IAsyncLifetime
     private static readonly string ConnectionString = BuildTestConnectionString();
 
     public ScriptedAgentModel AgentModel { get; } = new();
+    public FakeTelegramGateway Telegram { get; } = new();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -37,6 +39,8 @@ public class DietFlowFactory : WebApplicationFactory<Program>, IAsyncLifetime
             services.AddSingleton<IFileStorage, InMemoryFileStorage>();
             services.RemoveAll<IAgentModel>();
             services.AddSingleton<IAgentModel>(AgentModel);
+            services.RemoveAll<ITelegramGateway>();
+            services.AddSingleton<ITelegramGateway>(Telegram);
         });
     }
 

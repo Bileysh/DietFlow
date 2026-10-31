@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.FeatureManagement;
+using Microsoft.AspNetCore.DataProtection;
 using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<CityContext>();
 builder.Services.AddScoped<CurrentUser>();
+
+if (!string.IsNullOrWhiteSpace(builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"] ?? builder.Configuration["ApplicationInsights:ConnectionString"]))
+    builder.Services.AddApplicationInsightsTelemetry();
+builder.Services.AddSingleton<AppEvents>();
 builder.Services.AddScoped<UserAccountService>();
 builder.Services.AddScoped<ApiTokenService>();
 builder.Services.AddScoped<AnalysisQuotaService>();
@@ -33,6 +38,18 @@ builder.Services.AddScoped<WeeklyPlanService>();
 builder.Services.AddHttpClient<IAgentModel, GeminiAgentModel>(c => c.Timeout = TimeSpan.FromSeconds(120));
 builder.Services.AddScoped<AgentTools>();
 builder.Services.AddScoped<AgentService>();
+
+builder.Services.Configure<DietFlow.Web.Services.Telegram.TelegramOptions>(builder.Configuration.GetSection("Telegram"));
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<Telegram.Bot.ITelegramBotClient>(sp =>
+    new Telegram.Bot.TelegramBotClient(builder.Configuration["Telegram:BotToken"] is { Length: > 0 } token ? token : "0:disabled"));
+builder.Services.AddSingleton<DietFlow.Web.Services.Telegram.ITelegramGateway, DietFlow.Web.Services.Telegram.TelegramBotGateway>();
+builder.Services.AddScoped<DietFlow.Web.Services.Telegram.TelegramBotHandler>();
+builder.Services.AddHostedService<DietFlow.Web.Services.Telegram.TelegramPollingService>();
+
+builder.Services.AddMcpServer(o => o.ServerInfo = new() { Name = "DietFlow", Version = "1.0" })
+    .WithHttpTransport(o => o.Stateless = true)
+    .WithTools<DietFlow.Web.Services.Mcp.DietFlowMcpTools>();
 
 builder.Services.AddIdentityCore<AppUser>(o => o.User.RequireUniqueEmail = true)
     .AddRoles<IdentityRole>()
@@ -81,7 +98,29 @@ builder.Services.AddFeatureManagement()
     .UseDisabledFeaturesHandler((features, ctx) =>
         ctx.Result = new RedirectToActionResult("Index", "Premium", new { feature = features.FirstOrDefault() }));
 builder.Services.AddScoped<RecipeCalculator>();
-builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
+builder.Services.AddSingleton<LocalFileStorage>();
+var storage = builder.Configuration.GetSection("Storage").Get<StorageOptions>() ?? new StorageOptions();
+if (storage.Provider == "AzureBlob")
+{
+    builder.Services.AddSingleton(_ =>
+    {
+        var container = new Azure.Storage.Blobs.BlobContainerClient(storage.AzureBlobConnectionString, storage.AzureBlobContainer);
+        container.CreateIfNotExists(Azure.Storage.Blobs.Models.PublicAccessType.Blob);
+        return container;
+    });
+    builder.Services.AddSingleton<IFileStorage, AzureBlobFileStorage>();
+
+    var keysContainer = new Azure.Storage.Blobs.BlobContainerClient(storage.AzureBlobConnectionString, "dataprotection");
+    keysContainer.CreateIfNotExists();
+    builder.Services.AddDataProtection()
+        .SetApplicationName("DietFlow")
+        .PersistKeysToAzureBlobStorage(keysContainer.GetBlobClient("keys.xml"));
+}
+else
+{
+    builder.Services.AddSingleton<IFileStorage>(sp => sp.GetRequiredService<LocalFileStorage>());
+}
 
 builder.Services.Configure<AnthropicOptions>(builder.Configuration.GetSection("Anthropic"));
 builder.Services.Configure<GeminiOptions>(builder.Configuration.GetSection("Gemini"));
@@ -132,7 +171,7 @@ builder.Services.Configure<WebEncoderOptions>(o => o.TextEncoderSettings = new T
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
+if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -193,6 +232,14 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
+var forwarded = new ForwardedHeadersOptions
+{
+    ForwardedHeaders = Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedFor | Microsoft.AspNetCore.HttpOverrides.ForwardedHeaders.XForwardedProto,
+};
+forwarded.KnownIPNetworks.Clear();
+forwarded.KnownProxies.Clear();
+app.UseForwardedHeaders(forwarded);
+
 app.UseHttpsRedirection();
 
 var uploadsPath = Path.Combine(app.Environment.WebRootPath, "uploads");
@@ -211,6 +258,8 @@ app.UseOutputCache();
 
 app.MapStaticAssets();
 
+app.MapMcp("/mcp").RequireAuthorization();
+
 app.MapOpenApi();                     
 app.MapScalarApiReference(o => o.WithTitle("DietFlow API")); 
 
@@ -223,7 +272,7 @@ app.Run();
 
 static Task ApiStatusOrRedirect(Microsoft.AspNetCore.Authentication.RedirectContext<Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationOptions> ctx, int status)
 {
-    if (ctx.Request.Path.StartsWithSegments("/api"))
+    if (ctx.Request.Path.StartsWithSegments("/api") || ctx.Request.Path.StartsWithSegments("/mcp"))
     {
         ctx.Response.StatusCode = status;
         return Task.CompletedTask;

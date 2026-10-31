@@ -14,7 +14,7 @@ namespace DietFlow.Web.Controllers.Api;
 [Tags("AI agent")]
 [Authorize]
 public class AgentApiController(
-    AgentService agent, AnalysisQuotaService quota, AppDbContext db, CurrentUser currentUser, CityContext cityContext) : ApiControllerBase
+    AgentService agent, AnalysisQuotaService quota, AppDbContext db, CurrentUser currentUser, CityContext cityContext, AppEvents events) : ApiControllerBase
 {
     private const int MaxImageBytes = (int)ImageValidator.MaxBytes;
     
@@ -52,13 +52,14 @@ public class AgentApiController(
 
         db.AiAnalysisLogs.Add(new AiAnalysisLog { UserId = userId, Kind = AiUsageKind.AgentMessage });
         await db.SaveChangesAsync();
+        events.Track(AppEvents.AgentMessage, ("channel", "web"), ("withPhoto", image is not null), ("withLocation", request.Lat is not null));
 
         var city = await cityContext.GetCurrentAsync();
         var ctx = new AgentContext(userId, city?.Id ?? 0, city?.Name, request.Lat, request.Lng, image);
-        var events = agent.RunAsync(request.Message?.Trim() ?? "", request.History ?? [], ctx, HttpContext.RequestAborted);
+        var stream = agent.RunAsync(request.Message?.Trim() ?? "", request.History ?? [], ctx, HttpContext.RequestAborted);
 
         Response.Headers["X-Accel-Buffering"] = "no";
-        return TypedResults.ServerSentEvents(AsSse(events));
+        return TypedResults.ServerSentEvents(AsSse(stream));
     }
 
     private static async IAsyncEnumerable<SseItem<AgentEvent>> AsSse(IAsyncEnumerable<AgentEvent> events,

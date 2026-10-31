@@ -1,3 +1,4 @@
+using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
 using DietFlow.Web.Services;
@@ -5,12 +6,16 @@ using DietFlow.Web.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using DietFlow.Web.Services.Telegram;
 
 namespace DietFlow.Web.Controllers;
 
 [Authorize]
 public class ProfileController(
-    UserManager<AppUser> users, SignInManager<AppUser> signIn, ApiTokenService tokens, AnalysisQuotaService quota) : Controller
+    UserManager<AppUser> users, SignInManager<AppUser> signIn, ApiTokenService tokens, AnalysisQuotaService quota,
+    AppDbContext db, IOptions<TelegramOptions> telegram, AppEvents events) : Controller
 {
     public async Task<IActionResult> Index()
     {
@@ -26,6 +31,7 @@ public class ProfileController(
             Tokens = await tokens.ListAsync(user.Id),
             NewToken = TempData["NewToken"] as string,
             Logins = (await users.GetLoginsAsync(user)).Select(l => l.ProviderDisplayName ?? l.LoginProvider).ToList(),
+            TelegramBotUsername = telegram.Value.IsConfigured ? telegram.Value.BotUsername : null,
         });
     }
 
@@ -54,6 +60,7 @@ public class ProfileController(
         var user = await users.GetUserAsync(User);
         if (user is null) return Challenge();
         user.Plan = plan;
+        events.Track(AppEvents.PlanChanged, ("plan", plan));
         await users.UpdateAsync(user);
         await signIn.RefreshSignInAsync(user);
         TempData["Success"] = plan == SubscriptionPlan.Premium ? "Premium активовано (демо, без оплати)." : "Повернено план Free.";
@@ -77,6 +84,7 @@ public class ProfileController(
         }
 
         var (_, plain) = await tokens.CreateAsync(userId, name);
+        events.Track(AppEvents.ApiTokenCreated);
         TempData["NewToken"] = plain;
         return RedirectToAction(nameof(Index));
     }
@@ -86,6 +94,30 @@ public class ProfileController(
     public async Task<IActionResult> RevokeToken(int id)
     {
         if (await tokens.RevokeAsync(users.GetUserId(User)!, id)) TempData["Success"] = "Токен відкликано.";
+        return RedirectToAction(nameof(Index));
+    }
+    
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TelegramLink()
+    {
+        if (!telegram.Value.IsConfigured || string.IsNullOrWhiteSpace(telegram.Value.BotUsername))
+        {
+            TempData["Error"] = "Telegram-бот не налаштований.";
+            return RedirectToAction(nameof(Index));
+        }
+        var user = await db.Users.FirstAsync(u => u.Id == users.GetUserId(User));
+        var code = await TelegramBotHandler.CreateLinkCodeAsync(db, user);
+        return Redirect($"https://t.me/{telegram.Value.BotUsername.TrimStart('@')}?start={code}");
+    }
+
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> TelegramUnlink()
+    {
+        var userId = users.GetUserId(User);
+        await db.Users.Where(u => u.Id == userId).ExecuteUpdateAsync(s => s.SetProperty(u => u.TelegramChatId, (long?)null));
+        TempData["Success"] = "Telegram відв'язано.";
         return RedirectToAction(nameof(Index));
     }
 }

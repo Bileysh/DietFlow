@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authentication;
 using DietFlow.Web.Data;
 using DietFlow.Web.Models.Entities;
 using DietFlow.Web.Models.ViewModels;
+using DietFlow.Web.Services;
 using DietFlow.Web.Services.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -11,7 +12,7 @@ namespace DietFlow.Web.Controllers;
 
 [AllowAnonymous]
 public class AccountController(
-    SignInManager<AppUser> signIn, UserManager<AppUser> users, UserAccountService accounts, IWebHostEnvironment env) : Controller
+    SignInManager<AppUser> signIn, UserManager<AppUser> users, UserAccountService accounts, IWebHostEnvironment env, AppEvents events) : Controller
 {
     public async Task<IActionResult> Login(string? returnUrl, string? error)
     {
@@ -48,6 +49,7 @@ public class AccountController(
 
         await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
         await signIn.SignInAsync(user, isPersistent: true, info.LoginProvider);
+        events.Track(AppEvents.UserSignedIn, ("provider", info.LoginProvider));
         TempData["Success"] = $"Вітаємо, {user.DisplayName}!";
         return LocalRedirect(SafeReturnUrl(returnUrl));
     }
@@ -63,6 +65,7 @@ public class AccountController(
 
         await accounts.SyncAdminRoleAsync(user);
         await signIn.SignInAsync(user, isPersistent: true, "demo");
+        events.Track(AppEvents.UserSignedIn, ("provider", "demo"));
         TempData["Success"] = $"Ви увійшли як «{user.DisplayName}».";
         return LocalRedirect(SafeReturnUrl(returnUrl));
     }
