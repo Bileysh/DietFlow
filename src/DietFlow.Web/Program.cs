@@ -163,6 +163,14 @@ builder.Services.AddControllersWithViews(o =>
 
 builder.Services.AddProblemDetails();
 
+builder.Services.AddResponseCompression(o =>
+{
+    o.EnableForHttps = true;
+    o.Providers.Add<Microsoft.AspNetCore.ResponseCompression.BrotliCompressionProvider>();
+    o.Providers.Add<Microsoft.AspNetCore.ResponseCompression.GzipCompressionProvider>();
+    o.MimeTypes = Microsoft.AspNetCore.ResponseCompression.ResponseCompressionDefaults.MimeTypes.Concat(["image/svg+xml"]);
+});
+
 builder.Services.AddOutputCache(o =>
     o.AddPolicy(CacheTags.Policy, b => b.Expire(TimeSpan.FromSeconds(60)).SetVaryByQuery("*")));
 
@@ -250,6 +258,7 @@ var forwarded = new ForwardedHeadersOptions
 forwarded.KnownIPNetworks.Clear();
 forwarded.KnownProxies.Clear();
 app.UseForwardedHeaders(forwarded);
+app.UseResponseCompression();
 
 app.UseHttpsRedirection();
 

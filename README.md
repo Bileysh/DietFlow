@@ -15,7 +15,7 @@
 - **Камера та стиснення фото в браузері** — зйомка прямо на сайті, drag & drop, зменшення до 1280 px і видалення EXIF/GPS до відправки.
 - **Щоденник харчування** — прийоми їжі за днями, прогрес до денної норми, графік калорій і корисності за тиждень.
 - **Рецепти** — розрахунок калорій, БЖВ і вартості порції за найнижчими цінами в обраному місті; landing-сторінка кожного рецепта з SEO-розміткою.
-- **Продукти й магазини** — ~2,4 млн продуктів (Open Food Facts) з миттєвим autocomplete і цінами в магазинах.
+- **Продукти й магазини** — ~2,4 млн продуктів (Open Food Facts) з миттєвим autocomplete і цінами в магазинах (у хмарі — ~1,9 млн).
 - **Реальні магазини з OpenStreetMap** — ~3 900 супермаркетів 19 мереж у ~500 містах України; місто визначається автоматично (кнопка 📍).
 - **Мапа магазинів** — Leaflet + OpenStreetMap: режими «Місто» і «Поруч зі мною» (радіус від геолокації), фільтри за мережами й продуктом (маркери з ціною), найближчий і найдешевший магазин.
 - **Ціни на основі відкритих даних Держстату** — середні споживчі ціни по областях (офіційний SDMX API, CC BY 4.0) для 20 базових продуктів; ціни в магазинах — оцінка «ціна області × коефіцієнт мережі».
@@ -251,30 +251,31 @@ tests/postman/        колекція й оточення Postman
 ```
 
 ## Виконані завдання
-| Код | Опис | Статус |
-|---|---|---|
-| C1 | MVC: 8 сутностей зі зв'язками, поле-файл (фото), CRUD | ✅ |
-| C15 | Низькорівневі API браузера: камера (getUserMedia), File API, Canvas-стиснення | ✅ |
-| C5 | REST API з CRUD і кодами 200/201/204/4xx/5xx | ✅ |
-| B1 | Пагінація skip/limit/nextLink | ✅ |
-| B9 | Кешування відповідей API (Output Cache + інвалідація за тегами) | ✅ |
-| QA1 | Автотести API в Postman/Newman | ✅ |
-| F2 | Autocomplete (Select2 + AJAX, від 3 символів, debounce) на ~2,4 млн продуктів | ✅ |
-| C6 | Landing-сторінка рецепта (Bootstrap, контакти постійно на екрані) | ✅ |
-| C7 | SEO: meta, Open Graph, schema.org/Recipe, sitemap, robots | ✅ (аудит Seobility — після деплою) |
-| F1 | Графіки Chart.js (щоденник, БЖВ рецепта) | ✅ |
-| C8 | Мапа ~3 900 реальних магазинів (Leaflet/OSM): режим «поруч», фільтри мереж і цін, найближчий магазин | ✅ |
-| C4 | Docker + Docker Compose | 🟡 перевірка повного стеку — разом із деплоєм |
-| C16 | Вхід через Google (OAuth2, ASP.NET Identity), роль Admin, персональні API-токени | ✅ |
-| B6 | Free / Premium через feature flags (Microsoft.FeatureManagement): ліміт AI, тижневий план | ✅ |
-| QA3 | Тести автентифікації й авторизації (xUnit + WebApplicationFactory) | ✅ |
-| C21 | AI-агент: Gemini з function calling, 6 інструментів (4 читання, 2 запис), SSE-стрімінг кроків і відповіді | ✅ |
-| C22 | MCP-сервер (офіційний SDK): 4 інструменти на читання + 1 на запис, робота з Claude Desktop | ✅ |
-| B2 | Telegram-бот: фото → щоденник, /today, AI-помічник, прив'язка акаунта | ✅ |
-| C19 | Фото в Azure Blob Storage (напряму з Blob, кешування) | ✅ (перевірено на Azurite) |
-| C9 | Application Insights: кастомні події продукту | ✅ |
-| B7 | Serverless API на Azure Functions: розрахунок денної норми | ✅ |
-| C3 | CI/CD у GitHub Actions: тести → Docker-образ → деплой в Azure | ✅ |
-| C2 | Розгортання в Azure (Container Apps + PostgreSQL) | ⏳ після запуску deploy/azure-setup.sh |
+| Код | Бали | Опис | Де перевірити |
+|---|---|---|---|
+| C1 | 3 | MVC: 10+ сутностей зі зв'язками, поле-файл (фото страви й рецепта), CRUD | `/Meals`, `/Recipes`, `/Products`, `/Stores` |
+| C4 | 1 | Docker-образ (Dockerfile) і Docker Compose; той самий образ працює в Azure Container Apps | `docker-compose.yml`, Azure |
+| C5 | 3 | REST API з CRUD і кодами 200/201/204/4xx/5xx, ProblemDetails | `/scalar` |
+| QA1 | 2 | Автотести API в Postman/Newman (37 запитів, 71 перевірка) | `tests/postman` |
+| C6 | 3 | Landing-сторінка рецепта (Bootstrap, контакти постійно на екрані) | `/recipes/{slug}` |
+| C7 | 1 | SEO: meta, Open Graph, schema.org/Recipe, sitemap, robots, стиснення, favicon; аудит Seobility | `/sitemap.xml`, звіт Seobility |
+| F1 | 2 | Графіки Chart.js (щоденник за тиждень, БЖВ рецепта) | `/Meals`, лендинг рецепта |
+| B1 | 2 | Пагінація skip/limit/nextLink | `/api/v1/products?limit=20` |
+| C8 | 3 | Мапа ~3 900 реальних магазинів (Leaflet/OSM): режим «поруч», фільтри мереж і цін, найближчий магазин | `/Map` |
+| B2 | 2 | Telegram-бот: фото → щоденник, `/today`, AI-помічник, прив'язка акаунта | профіль → «Підключити Telegram» |
+| F2 | 4 | Autocomplete (Select2 + AJAX, від 3 символів, debounce) на ~2 млн продуктів Open Food Facts | форма рецепта / ціни |
+| B9 | 3 | Кешування відповідей API (Output Cache + інвалідація за тегами) | заголовок `Age` |
+| C15 | 3 | Низькорівневі API браузера: камера (getUserMedia), File API, Canvas-стиснення | `/Meals/Create` |
+| C16 | 3 | Вхід через Google (OAuth2, ASP.NET Identity), роль Admin, персональні API-токени | `/Account/Login`, `/Profile` |
+| B6 | 3 | Free / Premium через feature flags (Microsoft.FeatureManagement): ліміти AI, тижневий план | `/Premium`, `/MealPlan` |
+| QA3 | 3 | Тести автентифікації й авторизації (xUnit + WebApplicationFactory) | `dotnet test` |
+| C21 | 6 | AI-агент: Gemini з function calling, 6 інструментів, SSE-стрімінг кроків і відповіді | `/Assistant` |
+| C22 | 4 | MCP-сервер (офіційний SDK): 4 інструменти на читання + 1 на запис; Claude Desktop / Gemini CLI | `/mcp` |
+| C2 | 2 | Сайт у хмарі Azure (Container Apps + PostgreSQL Flexible Server) | посилання вгорі розділу «Хмара» |
+| C3 | 2 | CI/CD у GitHub Actions: тести → образ у GHCR → деплой у Container Apps і Functions (OIDC) | вкладка Actions |
+| C9 | 1 | Application Insights: кастомні події продукту | `customEvents` у Logs |
+| C19 | 3 | Фото страв в Azure Blob Storage, браузер завантажує їх напряму з Blob | адреса фото в щоденнику |
+| B7 | 3 | Serverless API на Azure Functions: денна норма калорій і БЖВ | профіль → «Розрахувати норму» |
+| | **62** | | |
 
 Джерела фото й даних — у [CREDITS.md](CREDITS.md).
