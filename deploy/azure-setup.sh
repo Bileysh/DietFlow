@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-LOCATION="${LOCATION:?Вкажіть регіон, напр. LOCATION=polandcentral}"
-RG="${RG:-dietflow-rg}"
+LOCATION="${LOCATION:-switzerlandnorth}"
+RG="${RG:-dietflow}"
 GITHUB_REPO="${GITHUB_REPO:-Bileysh/DietFlow}"
 IMAGE="${IMAGE:-ghcr.io/bileysh/dietflow:latest}"
 PROJECT="src/DietFlow.Web"

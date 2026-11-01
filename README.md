@@ -176,22 +176,30 @@ Claude Desktop → Settings → Developer → Edit Config (`claude_desktop_confi
 будь-який текст — відповідь AI-помічника; `/unlink` — відв'язати чат. Без прив'язки бот не показує жодних даних.
 
 ## Хмара (Azure) і CI/CD
-| Що | Сервіс |
-|---|---|
-| Сайт (Docker-образ) | Azure Container Apps |
-| База | Azure Database for PostgreSQL Flexible Server (B1ms) |
-| Фото страв | Azure Blob Storage — браузер завантажує їх напряму з Blob, кеш на рік |
-| Аналітика | Application Insights: запити, помилки і кастомні події (`MealPhotoAnalyzed`, `AgentMessage`, `UserSignedIn`, `PlanChanged`, `ApiTokenCreated`, `TelegramLinked`, `McpToolCalled`) |
-| Serverless API | Azure Functions (Flex Consumption): `POST /api/norms` — денна норма калорій і БЖВ (Mifflin-St Jeor), використовується в профілі |
-| CI/CD | GitHub Actions (`.github/workflows/ci-cd.yml`): тести на PostgreSQL → образ у GHCR → деплой у Container Apps і Functions після кожного push у `main` |
+**Сайт:** https://dietflow-web.wittydesert-6690ac45.switzerlandnorth.azurecontainerapps.io
 
-Інфраструктура створюється скриптом (Git Bash, після `az login`):
+Усі ресурси — у групі `dietflow`, регіон **Switzerland North** (Azure for Students дозволяє лише кілька регіонів).
+
+| Що | Сервіс | Ресурс |
+|---|---|---|
+| Сайт (Docker-образ) | Azure Container Apps | `dietflow-web` (середовище `dietflow-env`) |
+| База | Azure Database for PostgreSQL Flexible Server (B1ms, безкоштовно 12 міс.) | `dietflow-pg` |
+| Фото страв | Azure Blob Storage — браузер завантажує їх напряму з Blob, кеш на рік | `dietflowblob` |
+| Аналітика | Application Insights: запити, помилки і кастомні події (`MealPhotoAnalyzed`, `AgentMessage`, `UserSignedIn`, `PlanChanged`, `ApiTokenCreated`, `TelegramLinked`, `McpToolCalled`) | `dietflow-insights` |
+| Serverless API | Azure Functions (Flex Consumption): `POST /api/norms` — денна норма калорій і БЖВ (Mifflin-St Jeor), використовується в профілі | `dietflow-func` |
+| CI/CD | GitHub Actions (`.github/workflows/ci-cd.yml`): тести на PostgreSQL → образ у GHCR → деплой у Container Apps і Functions після кожного push у `main`; вхід в Azure через OIDC | App registration `dietflow-github` |
+
+Ресурси створено вручну в порталі; той самий набір можна створити скриптом (Git Bash, після `az login`):
 ```bash
-LOCATION=polandcentral bash deploy/azure-setup.sh
+bash deploy/azure-setup.sh
 ```
 Скрипт бере ключі з user-secrets і передає їх в Azure як secrets, налаштовує доступ GitHub Actions через OIDC (без паролів)
 і виводить змінні для GitHub (Settings → Secrets and variables → Actions → Variables) та redirect URI для Google OAuth.
-У хмарі `Database:MigrateOnStartup=true` застосовує міграції й довідникові дані при старті.
+У хмарі `Database:MigrateOnStartup=true` застосовує міграції й довідникові дані при старті; магазини OSM, ціни Держстату
+і Open Food Facts заливаються тими ж командами імпорту з рядком підключення до хмарної бази.
+
+> Середовище Container Apps створене в режимі Express: після зміни секретів чи змінних потрібно **Stop → Start**
+> застосунку (нова ревізія без нового образу не перечитує секрети). Деплой нового образу з CI робить це автоматично.
 
 ## Тести
 **xUnit + WebApplicationFactory** (`tests/DietFlow.Tests`) — 53 тести: автентифікація й авторизація (редирект на вхід,
