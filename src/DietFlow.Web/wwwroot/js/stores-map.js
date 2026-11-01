@@ -98,7 +98,7 @@
         if (entry) {
             const p = document.createElement('div');
             p.className = 'mt-1';
-            p.textContent = `Ціна: ${entry.price.toFixed(2)} грн/кг ` + ({ Manual: '✓ перевірено адміністратором', Stat: '📊 оцінка за Держстатом' }[entry.source] ?? '(демо)');
+            p.textContent = `Ціна: ${entry.price.toFixed(2)} грн/кг ` + ({ Manual: 'перевірено адміністратором', Stat: 'оцінка за даними Держстату' }[entry.source] ?? '(демо)');
             box.append(p);
         }
         return box;

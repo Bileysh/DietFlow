@@ -95,7 +95,7 @@
             <div class="d-flex flex-wrap gap-2">
                 <span class="badge text-bg-light">@CookingMethodText.Icon(r.Method) @CookingMethodText.Name(r.Method)</span>
                 <span class="badge text-bg-light">⏱ @r.CookTimeMinutes хв</span>
-                <span class="badge text-bg-light">🍽 @r.Servings порц.</span>
+                <span class="badge text-bg-light">@r.Servings порц.</span>
                 @if (s is not null)
                 {
                     <span class="badge text-bg-warning">🔥 @s.Kcal.ToString("0") ккал / порція</span>
@@ -239,7 +239,7 @@
                 <a class="link-light" href="@site.TelegramUrl" rel="noopener">✈️ Telegram</a>
             }
         </div>
-        <a class="btn btn-sm btn-success" asp-controller="Meals" asp-action="Create">📷 Проаналізувати свою страву</a>
+        <a class="btn btn-sm btn-success" asp-controller="Meals" asp-action="Create">Проаналізувати свою страву</a>
     </div>
 </aside>
 

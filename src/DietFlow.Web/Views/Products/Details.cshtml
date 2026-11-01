@@ -50,14 +50,14 @@
 @if (Model.Official is { } o)
 {
     <div class="alert alert-info py-2 small">
-        📊 Середня ціна за даними Держстату — <strong>@o.PricePerKg.ToString("0.00") грн/кг</strong>
+        Середня ціна за даними Держстату — <strong>@o.PricePerKg.ToString("0.00") грн/кг</strong>
         (@o.RegionName, @o.Period.ToString("MMMM yyyy", new System.Globalization.CultureInfo("uk-UA")); позиція «@o.StatName»).
-        Ціни в магазинах нижче — оцінка на її основі з поправкою на мережу, якщо їх не ввели користувачі.
+        Ціни в магазинах нижче — оцінка на її основі з поправкою на мережу (крім цін, перевірених адміністратором).
         <a href="https://stat.gov.ua/" class="alert-link" target="_blank" rel="noopener">Держстат</a>, CC BY 4.0.
     </div>
 }
 
-<h2 class="h5">Де купити — @Model.CityName <a asp-controller="Map" asp-action="Index" asp-route-productId="@p.Id" class="btn btn-sm btn-outline-primary ms-2">🗺 На мапі</a></h2>
+<h2 class="h5">Де купити — @Model.CityName <a asp-controller="Map" asp-action="Index" asp-route-productId="@p.Id" class="btn btn-sm btn-outline-primary ms-2">На мапі</a></h2>
 @if (Model.Prices.Count == 0)
 {
     <p class="text-muted">У магазинах цього міста ціни на продукт немає.</p>

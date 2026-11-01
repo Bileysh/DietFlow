@@ -67,13 +67,13 @@ public class AgentTools(AppDbContext db, RecipeCalculator calculator, MealAnalys
 
     public static string Label(string tool, JsonObject args) => tool switch
     {
-        "search_recipes" => "🔍 Шукаю рецепти" + Filters(args),
-        "get_recipe" => $"📖 Відкриваю рецепт #{Int(args, "recipeId")}",
-        "get_diary" => $"📒 Дивлюсь щоденник за {Str(args, "date") ?? "сьогодні"}",
-        "find_cheapest_stores" => $"💰 Шукаю, де найдешевше: {Str(args, "product")}",
-        "analyze_photo" => "📷 Аналізую фото страви",
-        "add_meal" => "✍ Додаю в щоденник",
-        _ => $"⚙ {tool}",
+        "search_recipes" => "Шукаю рецепти" + Filters(args),
+        "get_recipe" => $"Відкриваю рецепт #{Int(args, "recipeId")}",
+        "get_diary" => $"Дивлюсь щоденник за {Str(args, "date") ?? "сьогодні"}",
+        "find_cheapest_stores" => $"Шукаю, де найдешевше: {Str(args, "product")}",
+        "analyze_photo" => "Аналізую фото страви",
+        "add_meal" => "Додаю в щоденник",
+        _ => $"{tool}",
     };
 
     public async Task<(JsonNode Result, string Summary)> ExecuteAsync(string tool, JsonObject args, AgentContext ctx, CancellationToken ct)

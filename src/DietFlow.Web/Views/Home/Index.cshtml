@@ -1,11 +1,139 @@
+@model HomeVm
 @{
-    ViewData["Title"] = "Головна";
+    ViewData["Title"] = "Щоденник харчування з підрахунком калорій";
+    var sample = Model.Recipes.FirstOrDefault();
+    var culture = System.Globalization.CultureInfo.GetCultureInfo("uk-UA");
 }
 
-<div class="py-4">
-    <h1 class="display-6">DietFlow</h1>
-    <p class="lead">Сфотографуйте страву — AI оцінить калорії й корисність, підкаже кращий рецепт і де купити інгредієнти дешевше.</p>
-    <a class="btn btn-success" asp-controller="Meals" asp-action="Create">📷 Проаналізувати страву</a>
-    <a class="btn btn-primary" asp-controller="Products" asp-action="Index">Продукти</a>
-    <a class="btn btn-outline-primary" asp-controller="Stores" asp-action="Index">Магазини</a>
-</div>
+<section class="df-hero row align-items-center g-4 g-lg-5 pt-2 pb-5">
+    <div class="col-lg-6">
+        <div class="df-eyebrow mb-3">Щоденник харчування</div>
+        <h1 class="mb-3">Скільки калорій на тарілці — видно з одного фото</h1>
+        <p class="lead mb-4">
+            Сфотографуйте обід, і DietFlow порахує калорії та БЖВ, запише страву в щоденник,
+            порадить рецепт, корисніший за ту саму ціну, і підкаже, де інгредієнти дешевші у вашому місті.
+        </p>
+        <div class="d-flex flex-wrap gap-2 mb-5">
+            <a class="btn btn-primary btn-lg px-4" asp-controller="Meals" asp-action="Create">Додати страву за фото</a>
+            <a class="btn btn-outline-primary btn-lg px-4" asp-controller="Recipes" asp-action="Index">Рецепти</a>
+        </div>
+        <div class="d-flex flex-wrap gap-5">
+            <div>
+                <div class="df-stat">@Model.StoreCount.ToString("N0", culture)</div>
+                <div class="df-stat-label">магазинів на мапі</div>
+            </div>
+            <div>
+                <div class="df-stat">@Model.CityCount</div>
+                <div class="df-stat-label">міст України</div>
+            </div>
+            <div>
+                <div class="df-stat">@Model.RecipeCount</div>
+                <div class="df-stat-label">рецептів з цінами</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        @if (sample is not null)
+        {
+            <div class="df-sample">
+                <img src="@sample.PhotoPath" alt="@sample.Title" />
+                <div class="df-sample-card">
+                    <div class="d-flex justify-content-between align-items-baseline mb-2">
+                        <div>
+                            <div class="small text-muted">Приклад запису в щоденнику</div>
+                            <div class="fw-semibold">@sample.Title</div>
+                        </div>
+                        <div class="text-end">
+                            <div class="df-stat" style="font-size:1.35rem">@(sample.Kcal?.ToString("0") ?? "—")</div>
+                            <div class="df-stat-label">ккал</div>
+                        </div>
+                    </div>
+                    <div class="df-macro mb-2" aria-hidden="true"><span style="width:30%"></span><span style="width:25%"></span><span style="width:45%"></span></div>
+                    <div class="d-flex justify-content-between small text-muted">
+                        <span>білки · жири · вуглеводи</span>
+                        @if (sample.Cost is { } cost)
+                        {
+                            <span>порція від <strong class="text-body">@cost.ToString("0") грн</strong>@(Model.CityName is null ? "" : $", {Model.CityName}")</span>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+<section class="py-5 border-top">
+    <h2 class="df-section-title mb-4">Як це працює</h2>
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="df-step-num mb-2">01</div>
+            <h3 class="h6">Фото страви</h3>
+            <p class="text-muted mb-0">Знімайте прямо з телефона: фото стискається в браузері, а нейромережа розпізнає страву й інгредієнти.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="df-step-num mb-2">02</div>
+            <h3 class="h6">Калорії й оцінка</h3>
+            <p class="text-muted mb-0">Ккал, білки, жири й вуглеводи, оцінка корисності та конкретні поради, що можна змінити.</p>
+        </div>
+        <div class="col-md-4">
+            <div class="df-step-num mb-2">03</div>
+            <h3 class="h6">Що приготувати далі</h3>
+            <p class="text-muted mb-0">Рецепти під вашу норму калорій із вартістю порції за найнижчими цінами в магазинах поруч.</p>
+        </div>
+    </div>
+</section>
+
+@if (Model.Recipes.Count > 0)
+{
+    <section class="py-5 border-top">
+        <div class="d-flex justify-content-between align-items-baseline mb-4">
+            <h2 class="df-section-title mb-0">Що приготувати сьогодні</h2>
+            <a asp-controller="Recipes" asp-action="Index" class="small">Усі рецепти</a>
+        </div>
+        <div class="row g-3">
+            @foreach (var r in Model.Recipes)
+            {
+                <div class="col-6 col-lg-3">
+                    <a class="df-recipe-card" href="/recipes/@r.Slug">
+                        <img src="@r.PhotoPath" alt="@r.Title" loading="lazy" />
+                        <div class="p-3">
+                            <div class="fw-semibold mb-1">@r.Title</div>
+                            <div class="small text-muted">
+                                @(r.Kcal?.ToString("0") ?? "—") ккал · @r.CookTimeMinutes хв@(r.Cost is { } c ? $" · {c:0} грн" : "")
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+<section class="py-5 border-top">
+    <div class="row g-4">
+        <div class="col-sm-6 col-lg-3">
+            <div class="df-feature">
+                <h3 class="h6"><a asp-controller="Meals" asp-action="Index" class="text-body">Щоденник</a></h3>
+                <p class="small text-muted mb-0">Усі прийоми їжі за день, прогрес до норми й графік за тиждень.</p>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="df-feature">
+                <h3 class="h6"><a asp-controller="Map" asp-action="Index" class="text-body">Мапа магазинів</a></h3>
+                <p class="small text-muted mb-0">Тисячі супермаркетів з OpenStreetMap, найдешевший і найближчий поруч з вами.</p>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="df-feature">
+                <h3 class="h6"><a asp-controller="Assistant" asp-action="Index" class="text-body">Помічник</a></h3>
+                <p class="small text-muted mb-0">Питайте звичайними словами: «вечеря до 500 ккал і 80 грн» — він знайде й порахує.</p>
+            </div>
+        </div>
+        <div class="col-sm-6 col-lg-3">
+            <div class="df-feature">
+                <h3 class="h6"><a asp-controller="Profile" asp-action="Index" class="text-body">Telegram і API</a></h3>
+                <p class="small text-muted mb-0">Надсилайте фото боту в Telegram або підключайте щоденник до Claude через MCP.</p>
+            </div>
+        </div>
+    </div>
+</section>

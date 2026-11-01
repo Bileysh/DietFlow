@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — DietFlow</title>
     <script type="importmap"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,600&family=Onest:wght@400;500;600&display=swap" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/DietFlow.Web.styles.css" asp-append-version="true" />
@@ -14,74 +17,71 @@
     }
     else
     {
-        <meta name="description" content="DietFlow — AI-аналіз страв за фото, підрахунок калорій і корисні рецепти з найдешевшими інгредієнтами." />
+        <meta name="description" content="DietFlow — щоденник харчування: калорії страви за фото, корисні рецепти й ціни на продукти в магазинах поруч." />
     }
 </head>
 <body>
-    <header>
-        <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand fw-semibold" asp-controller="Home" asp-action="Index">🥗 DietFlow</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+    @{
+        string Active(params string[] controllers) =>
+            controllers.Contains(ViewContext.RouteData.Values["controller"]?.ToString()) ? "active" : "";
+        var displayName = User.FindFirst(AppClaims.DisplayName)?.Value ?? User.Identity?.Name ?? "";
+        var initials = string.Concat(displayName.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(w => char.ToUpperInvariant(w[0])));
+    }
+    <header class="df-header mb-4">
+        <nav class="navbar navbar-expand-lg py-2">
+            <div class="container">
+                <a class="df-brand navbar-brand" asp-controller="Home" asp-action="Index">
+                    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden="true">
+                        <circle cx="16" cy="16" r="14" fill="none" stroke="#2f5d43" stroke-width="2.4"/>
+                        <circle cx="16" cy="16" r="8.5" fill="none" stroke="#2f5d43" stroke-width="1.4" opacity=".45"/>
+                        <path d="M16 9.5c4.2 1.6 5.6 6.2 3.2 9.8-2.4-.9-4.6-3.6-3.2-9.8z" fill="#b8562b"/>
+                    </svg>
+                    DietFlow
+                </a>
+                <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
                         aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Меню">
                     <span class="navbar-toggler-icon"></span>
                 </button>
-                <div class="navbar-collapse collapse d-lg-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Meals" asp-action="Index">Щоденник</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Assistant" asp-action="Index">Помічник 🤖</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Recipes" asp-action="Index">Рецепти</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Products" asp-action="Index">Продукти</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Stores" asp-action="Index">Магазини</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="Map" asp-action="Index">Мапа</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-controller="MealPlan" asp-action="Index">Тижневий план <span class="badge text-bg-warning">⭐</span></a>
-                        </li>
+                <div class="navbar-collapse collapse">
+                    <ul class="navbar-nav df-nav me-auto ms-lg-3 gap-lg-1">
+                        <li class="nav-item"><a class="nav-link @Active("Meals")" asp-controller="Meals" asp-action="Index">Щоденник</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("Recipes")" asp-controller="Recipes" asp-action="Index">Рецепти</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("Products")" asp-controller="Products" asp-action="Index">Продукти</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("Stores", "StorePrices")" asp-controller="Stores" asp-action="Index">Магазини</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("Map")" asp-controller="Map" asp-action="Index">Мапа</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("Assistant")" asp-controller="Assistant" asp-action="Index">Помічник</a></li>
+                        <li class="nav-item"><a class="nav-link @Active("MealPlan", "Premium")" asp-controller="MealPlan" asp-action="Index">План на тиждень <span class="df-tag">Premium</span></a></li>
                     </ul>
-                    @await Component.InvokeAsync("CitySelector")
-                    @if (User.Identity?.IsAuthenticated == true)
-                    {
-                        <div class="dropdown ms-lg-2 mt-2 mt-lg-0">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                👤 <span class="d-inline-block text-truncate align-bottom" style="max-width:150px">@(User.FindFirst(AppClaims.DisplayName)?.Value ?? User.Identity.Name)</span>
-                                @if (User.FindFirst(AppClaims.Plan)?.Value == nameof(SubscriptionPlan.Premium))
-                                {
-                                    <span class="badge text-bg-warning">Premium</span>
-                                }
-                                @if (User.IsInRole(AppRoles.Admin))
-                                {
-                                    <span class="badge text-bg-dark">адмін</span>
-                                }
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" asp-controller="Profile" asp-action="Index">Профіль і API-токени</a></li>
-                                <li><a class="dropdown-item" asp-controller="Premium" asp-action="Index">Плани Free / Premium</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <form asp-controller="Account" asp-action="Logout" method="post">
-                                        <button type="submit" class="dropdown-item">Вийти</button>
-                                    </form>
-                                </li>
-                            </ul>
-                        </div>
-                    }
-                    else
-                    {
-                        <a class="btn btn-sm btn-primary ms-lg-2 mt-2 mt-lg-0" asp-controller="Account" asp-action="Login"
-                           asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)">Увійти</a>
-                    }
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2 mt-lg-0">
+                        @await Component.InvokeAsync("CitySelector")
+                        @if (User.Identity?.IsAuthenticated == true)
+                        {
+                            <div class="dropdown">
+                                <button class="df-user-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <span class="df-avatar">@(initials.Length > 0 ? initials : "?")</span>
+                                    <span class="d-inline-block text-truncate small" style="max-width:130px">@displayName</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li class="px-3 py-1 small text-muted">
+                                        @(User.FindFirst(AppClaims.Plan)?.Value == nameof(SubscriptionPlan.Premium) ? "План Premium" : "План Free")@(User.IsInRole(AppRoles.Admin) ? " · адміністратор" : "")
+                                    </li>
+                                    <li><a class="dropdown-item" asp-controller="Profile" asp-action="Index">Профіль і API-токени</a></li>
+                                    <li><a class="dropdown-item" asp-controller="Premium" asp-action="Index">Плани Free і Premium</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <form asp-controller="Account" asp-action="Logout" method="post">
+                                            <button type="submit" class="dropdown-item">Вийти</button>
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        }
+                        else
+                        {
+                            <a class="btn btn-sm btn-primary px-3" asp-controller="Account" asp-action="Login"
+                               asp-route-returnUrl="@(Context.Request.Path + Context.Request.QueryString)">Увійти</a>
+                        }
+                    </div>
                 </div>
             </div>
         </nav>
@@ -107,8 +107,9 @@
     </div>
 
     <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 — DietFlow · магазини: © <a href="https://www.openstreetmap.org/copyright" class="link-secondary">OpenStreetMap</a> · ціни: оцінка за <a href="https://stat.gov.ua/" class="link-secondary">Держстатом</a> (CC BY 4.0) або перевірені адміністратором
+        <div class="container d-flex flex-wrap justify-content-between gap-2">
+            <span>© 2026 DietFlow — навчальний проєкт з веб-технологій</span>
+            <span>Магазини © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · ціни — оцінка за даними <a href="https://stat.gov.ua/">Держстату</a> (CC BY 4.0)</span>
         </div>
     </footer>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>

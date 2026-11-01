@@ -1,10 +1,14 @@
 @model Microsoft.AspNetCore.Mvc.Rendering.SelectList
-<form asp-controller="Cities" asp-action="Select" method="post" class="d-flex align-items-center gap-2">
+<form asp-controller="Cities" asp-action="Select" method="post" class="d-flex align-items-center gap-1">
     <input type="hidden" name="returnUrl" value="@(Context.Request.Path + Context.Request.QueryString)" />
-    <label for="citySelect" class="small text-muted mb-0">Місто</label>
-    <select id="citySelect" name="cityId" asp-items="Model" class="form-select form-select-sm"
-            onchange="this.form.submit()"></select>
+    <label for="citySelect" class="visually-hidden">Місто для цін</label>
+    <select id="citySelect" name="cityId" asp-items="Model" class="form-select form-select-sm" style="max-width:150px"
+            onchange="this.form.submit()" title="Місто для цін"></select>
     <noscript><button type="submit" class="btn btn-sm btn-outline-secondary">OK</button></noscript>
-    <button type="button" id="cityDetect" class="btn btn-sm btn-outline-secondary" title="Визначити моє місто за геолокацією"
-            aria-label="Визначити моє місто">📍</button>
+    <button type="button" id="cityDetect" class="btn btn-sm btn-outline-secondary df-icon-btn" title="Визначити моє місто за геолокацією"
+            aria-label="Визначити моє місто">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+        </svg>
+    </button>
 </form>

@@ -20,7 +20,7 @@
                 `В ${json.carbsG} г · вода ${json.waterMl} мл · ІМТ ${json.bmi} (${json.bmiCategory}). Підставлено в поле — натисніть «Зберегти».`;
             goalInput.value = json.targetKcal;
         } catch (err) {
-            out.textContent = '⚠ ' + (err.message || 'Сервіс розрахунку недоступний.');
+            out.textContent = (err.message || 'Сервіс розрахунку недоступний.');
         }
     });
 })();

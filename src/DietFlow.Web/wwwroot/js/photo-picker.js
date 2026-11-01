@@ -19,8 +19,8 @@
                 <div class="photo-info small mt-1"></div>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-2">
-                <button type="button" class="btn btn-sm btn-outline-primary photo-choose">🖼️ Обрати файл</button>
-                <button type="button" class="btn btn-sm btn-outline-primary photo-camera">📷 Зробити фото</button>
+                <button type="button" class="btn btn-sm btn-outline-primary photo-choose">Обрати файл</button>
+                <button type="button" class="btn btn-sm btn-outline-primary photo-camera">Зробити фото</button>
                 <button type="button" class="btn btn-sm btn-link text-danger photo-clear d-none">Прибрати</button>
             </div>
             <div class="photo-error text-danger small mt-1"></div>`;
@@ -157,7 +157,7 @@
             <div class="modal-dialog modal-dialog-centered modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2 class="modal-title h5">📷 Фото страви</h2>
+                        <h2 class="modal-title h5">Фото страви</h2>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
                     </div>
                     <div class="modal-body text-center">

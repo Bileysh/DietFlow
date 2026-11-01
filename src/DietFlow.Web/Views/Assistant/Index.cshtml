@@ -6,7 +6,7 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1">AI-помічник 🤖</h1>
+        <h1 class="h3 mb-1">Помічник</h1>
         <div class="text-muted small">Підбирає рецепти під калорії й бюджет, рахує БЖВ за фото, шукає найдешевші магазини
             і веде ваш щоденник. Ціни — для міста @(ViewBag.CityName ?? "не обрано").</div>
     </div>
@@ -49,7 +49,7 @@
                           placeholder="Напишіть повідомлення… (Enter — надіслати, Shift+Enter — новий рядок)" aria-label="Повідомлення"></textarea>
                 <div class="d-flex flex-column gap-1">
                     <button type="submit" class="btn btn-primary" id="chatSend" @(ViewBag.Available == true ? "" : "disabled")>Надіслати</button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chatPhotoToggle" title="Прикріпити фото страви">📷 Фото</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="chatPhotoToggle" title="Прикріпити фото страви">Фото</button>
                 </div>
             </div>
             <div class="d-flex flex-wrap justify-content-between small">

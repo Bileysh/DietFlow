@@ -61,7 +61,7 @@
 
         <div class="card">
             <div class="card-body">
-                <h2 class="h6">План: @(isPremium ? "Premium ⭐" : "Free")</h2>
+                <h2 class="h6">План: @(isPremium ? "Premium" : "Free")</h2>
                 @foreach (var (label, q) in new[] { ("AI-аналізів фото", Model.Quota), ("Повідомлень помічнику", Model.AgentQuota) })
                 {
                     <p class="small mb-1">
@@ -99,7 +99,7 @@
                     <h2 class="h6">Telegram-бот</h2>
                     @if (u.TelegramChatId is not null)
                     {
-                        <p class="small mb-2">✅ Підключено. Надсилайте боту <a href="https://t.me/@Model.TelegramBotUsername.TrimStart('@')" target="_blank" rel="noopener">@@@Model.TelegramBotUsername.TrimStart('@')</a>
+                        <p class="small mb-2">Підключено. Надсилайте боту <a href="https://t.me/@Model.TelegramBotUsername.TrimStart('@')" target="_blank" rel="noopener">@@@Model.TelegramBotUsername.TrimStart('@')</a>
                             фото страв або питання; <code>/today</code> — щоденник за сьогодні.</p>
                         <form asp-action="TelegramUnlink" method="post">
                             <button type="submit" class="btn btn-sm btn-outline-secondary">Відв'язати</button>
@@ -183,7 +183,7 @@
         document.getElementById('copyToken')?.addEventListener('click', async e => {
             const input = document.getElementById('newToken');
             try { await navigator.clipboard.writeText(input.value); } catch { input.select(); document.execCommand('copy'); }
-            e.target.textContent = 'Скопійовано ✓';
+            e.target.textContent = 'Скопійовано';
         });
     </script>
 }

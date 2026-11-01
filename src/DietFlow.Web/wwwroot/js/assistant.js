@@ -200,7 +200,7 @@
                         const li = [...view.steps.querySelectorAll('li')].reverse().find(x => x.dataset.tool === e.tool && !x.dataset.done);
                         if (li) {
                             li.dataset.done = '1';
-                            li.textContent = li.textContent.replace(/…$/, '') + (e.ok ? ' → ' : ' ⚠ ') + e.text;
+                            li.textContent = li.textContent.replace(/…$/, '') + (e.ok ? ' — ' : ' — помилка: ') + e.text;
                             if (!e.ok) li.classList.add('text-danger');
                         }
                     } else if (e.type === 'delta') {
@@ -220,7 +220,7 @@
             typing.remove();
             const p = document.createElement('div');
             p.className = 'text-danger small';
-            p.textContent = '⚠ ' + (err.message || 'Помилка з\'єднання.');
+            p.textContent = 'Помилка: ' + (err.message || 'Помилка з\'єднання.');
             view.body.appendChild(p);
         } finally {
             typing.remove();
