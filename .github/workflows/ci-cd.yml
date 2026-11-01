@@ -68,7 +68,7 @@ jobs:
 
   deploy-web:
     needs: image
-    if: github.event_name != 'pull_request' && vars.AZURE_CLIENT_ID != ''
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     steps:
@@ -95,7 +95,7 @@ jobs:
 
   deploy-functions:
     needs: test
-    if: github.event_name != 'pull_request' && vars.AZURE_CLIENT_ID != ''
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: production
     steps:
