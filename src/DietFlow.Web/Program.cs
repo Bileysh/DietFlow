@@ -100,7 +100,18 @@ builder.Services.AddFeatureManagement()
 builder.Services.AddScoped<RecipeCalculator>();
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection("Storage"));
 builder.Services.AddSingleton<LocalFileStorage>();
+foreach (var key in new[] { "ConnectionStrings:Default", "Storage:AzureBlobConnectionString", "APPLICATIONINSIGHTS_CONNECTION_STRING" })
+{
+    if (builder.Configuration[key] is { } raw && raw != raw.Trim())
+        builder.Configuration[key] = raw.Trim();
+}
+
 var storage = builder.Configuration.GetSection("Storage").Get<StorageOptions>() ?? new StorageOptions();
+if (storage.Provider == "AzureBlob" && !AzureBlobFileStorage.IsValidConnectionString(storage.AzureBlobConnectionString, out var problem))
+{
+    Console.Error.WriteLine($"Storage:AzureBlobConnectionString is invalid ({problem}) — falling back to local file storage.");
+    storage.Provider = "Local";
+}
 if (storage.Provider == "AzureBlob")
 {
     builder.Services.AddSingleton(_ =>

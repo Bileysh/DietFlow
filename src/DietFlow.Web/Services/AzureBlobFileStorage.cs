@@ -12,6 +12,23 @@ public class StorageOptions
 
 public class AzureBlobFileStorage(BlobContainerClient container, LocalFileStorage local, ILogger<AzureBlobFileStorage> logger) : IFileStorage
 {
+    public static bool IsValidConnectionString(string? connectionString, out string problem)
+    {
+        var parts = (connectionString ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Select(p => p.Split('=', 2)[0].Trim()).ToList();
+        problem = $"length={connectionString?.Length ?? 0}, parts=[{string.Join(",", parts)}]";
+        try
+        {
+            _ = new BlobServiceClient(connectionString);
+            return true;
+        }
+        catch (Exception ex) when (ex is FormatException or ArgumentException)
+        {
+            problem += ", error=" + ex.Message;
+            return false;
+        }
+    }
+
     public async Task<string> SaveImageAsync(IFormFile file, string folder, CancellationToken ct = default)
     {
         var ext = await ImageValidator.DetectExtensionAsync(file)
